@@ -339,11 +339,7 @@ class ClosGenerator:
 
         jsonData = {"sharedDegree": self.sharedDegree, 
                     "numTiers": self.numTiers,
-                    "numTofNodes": (self.sharedDegree//2)**(self.numTiers-1),
-                    "numServers": 2*((self.sharedDegree//2)**self.numTiers),
-                    "numSwitches": ((2*self.numTiers)-1)*((self.sharedDegree//2)**(self.numTiers-1)),
-                    "numLeaves": 2*((self.sharedDegree//2)**(self.numTiers-1)),
-                    "numPods": 2*((self.sharedDegree//2)**(self.numTiers-2))}
+                    "protocol": self.PROTOCOL}
 
         for tier in reversed(range(self.numTiers+1)):
             nodes = [v for v in self.clos if self.clos.nodes[v]["tier"] == tier]
@@ -587,60 +583,6 @@ class BGPDCNConfig(ClosGenerator):
 
         return
 
-    def logGraphInfo(self):
-        """
-        Output folded-Clos topology information into a log file.
-        
-        :param k: Degree shared by each node.
-        :param t: Number of tiers in the graph.
-        :param topTier: The folded-Clos tier at the top of the topology.
-        """
-        
-        k = self.sharedDegree
-        t = self.numTiers
-        topTier = t
-
-        numTofNodes = (k//2)**(t-1)
-        numServers = 2*((k//2)**t)
-        numSwitches = ((2*t)-1)*((k//2)**(t-1))
-        numLeaves = 2*((k//2)**(t-1))
-        numPods = 2*((k//2)**(t-2))
-        
-        with open(f'clos_k{self.sharedDegree}_t{self.numTiers}_BGP.log', 'w') as logFile:
-            logFile.write("=============\nFOLDED CLOS\nk = {k}, t = {t}\n{k}-port devices with {t} tiers.\n=============\n".format(k=k, t=t))
-
-            logFile.write("Number of ToF Nodes: {}\n".format(numTofNodes))
-            logFile.write("Number of physical servers: {}\n".format(numServers))
-            logFile.write("Number of networking nodes: {}\n".format(numSwitches))
-            logFile.write("Number of leaves: {}\n".format(numLeaves))
-            logFile.write("Number of Pods: {}\n".format(numPods))
-
-            for tier in reversed(range(self.SEC_TIER, topTier+1)):
-                nodes = [v for v in self.clos if self.clos.nodes[v]["tier"] == tier]
-                logFile.write("\n== TIER {} ==\n".format(tier))
-
-                for node in sorted(nodes):
-                    logFile.write(node)
-                    logFile.write(f'\n\tASN = {self.clos.nodes[node]["ASN"]}') # BGP ASN printout
-                    logFile.write(f'\n\tAdvertised routes: {self.clos.nodes[node]["advertise"]}')
-                    logFile.write("\n\tnorthbound:\n")
-                    
-                    for n in self.clos.nodes[node]["northbound"]:
-                        addr = self.clos.nodes[node]["ipv4"][n]
-                        logFile.write(f"\t\t{n} - {addr}\n")
-                        
-                    logFile.write("\n\tsouthbound:\n")
-
-                    if(tier == self.LEAF_TIER and self.singleComputeSubnet):
-                        addr = self.clos.nodes[node]["ipv4"]["compute"]
-                        logFile.write(f"\t\tcompute - {addr}\n")
-                    else:
-                        for s in self.clos.nodes[node]["southbound"]:                        
-                            addr = self.clos.nodes[node]["ipv4"][s]
-                            logFile.write(f"\t\t{s} - {addr}\n")
-                        
-        return
-
     def jsonGraphInfo(self):
         '''
         Get a JSON-formatted output of the graph information
@@ -650,11 +592,7 @@ class BGPDCNConfig(ClosGenerator):
 
         jsonData = {"sharedDegree": self.sharedDegree, 
                     "numTiers": self.numTiers,
-                    "numTofNodes": (self.sharedDegree//2)**(self.numTiers-1),
-                    "numServers": 2*((self.sharedDegree//2)**self.numTiers),
-                    "numSwitches": ((2*self.numTiers)-1)*((self.sharedDegree//2)**(self.numTiers-1)),
-                    "numLeaves": 2*((self.sharedDegree//2)**(self.numTiers-1)),
-                    "numPods": 2*((self.sharedDegree//2)**(self.numTiers-2))}
+                    "protocol": self.PROTOCOL}
 
         for tier in reversed(range(self.SEC_TIER, self.numTiers+1)):
             nodes = [v for v in self.clos if self.clos.nodes[v]["tier"] == tier]
@@ -666,7 +604,7 @@ class BGPDCNConfig(ClosGenerator):
                                                   "advertisedRoutes": [],
                                                   "northbound": [], 
                                                   "southbound": []}
-                
+
                 for route in self.clos.nodes[node]["advertise"]:
                     jsonData[f"tier_{tier}"][node]["advertisedRoutes"].append(route)
 
@@ -676,7 +614,6 @@ class BGPDCNConfig(ClosGenerator):
 
                 if(tier == self.LEAF_TIER and self.singleComputeSubnet):
                     addr = self.clos.nodes[node]["ipv4"]["compute"]
-                    logFile.write(f"\t\tcompute - {addr}\n")
                     jsonData[f"tier_{tier}"][node]["southbound"].append(f"compute - {addr}")
                 else:
                     for southNode in self.clos.nodes[node]["southbound"]:
@@ -689,7 +626,7 @@ class BGPDCNConfig(ClosGenerator):
         return False if node == "compute" else self.clos.nodes[node]["tier"] > self.COMPUTE_TIER
 
     def isSecurityNode(self, node):
-        return True if node.startswith(SEC_NAME) else False
+        return True if node.startswith(self.SEC_NAME) else False
 
     def iterNetwork(self, fabricFormating=False):
         """
@@ -902,55 +839,3 @@ class MTPConfig(ClosGenerator):
             intfName = f"intf-{otherNode}"
 
         return intfName
-    
-    def logGraphInfo(self):
-        """
-        Output folded-Clos topology information into a log file.
-        
-        :param k: Degree shared by each node.
-        :param t: Number of tiers in the graph.
-        :param topTier: The folded-Clos tier at the top of the topology.
-        """
-        
-        k = self.sharedDegree
-        t = self.numTiers
-        topTier = t
-
-        numTofNodes = (k//2)**(t-1)
-        numServers = 2*((k//2)**t)
-        numSwitches = ((2*t)-1)*((k//2)**(t-1))
-        numLeaves = 2*((k//2)**(t-1))
-        numPods = 2*((k//2)**(t-2))
-        
-        with open(f'clos_k{self.sharedDegree}_t{self.numTiers}_MTP.log', 'w') as logFile:
-            logFile.write("=============\nMTP FOLDED CLOS\nk = {k}, t = {t}\n{k}-port devices with {t} tiers.\n=============\n".format(k=k, t=t))
-
-            logFile.write("Number of ToF Nodes: {}\n".format(numTofNodes))
-            logFile.write("Number of physical servers: {}\n".format(numServers))
-            logFile.write("Number of networking nodes: {}\n".format(numSwitches))
-            logFile.write("Number of leaves: {}\n".format(numLeaves))
-            logFile.write("Number of Pods: {}\n".format(numPods))
-
-            for tier in reversed(range(topTier+1)):
-                nodes = [v for v in self.clos if self.clos.nodes[v]["tier"] == tier]
-                logFile.write(f"\n== TIER {tier} ==\n")
-
-                for node in sorted(nodes):
-                    logFile.write(node)
-                    logFile.write(f'\n\tisTopTier = {self.clos.nodes[node]["isTopTier"]}')
-                    
-                    logFile.write("\n\tnorthbound:\n")
-                    for n in self.clos.nodes[node]["northbound"]:
-                        addr = self.clos.nodes[node]["ipv4"][n]
-                        logFile.write(f"\t\t{n} - {addr}\n")
-                        
-                    logFile.write("\n\tsouthbound:\n")
-                    if(tier == self.LEAF_TIER and self.singleComputeSubnet):
-                        addr = self.clos.nodes[node]["ipv4"]["compute"]
-                        logFile.write(f"\t\tcompute - {addr}\n")
-                    else:
-                        for s in self.clos.nodes[node]["southbound"]:                        
-                            addr = self.clos.nodes[node]["ipv4"][s]
-                            logFile.write(f"\t\t{s} - {addr}\n")
-
-        return

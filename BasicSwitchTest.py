@@ -12,7 +12,7 @@ from mininet.cli import CLI
 
 # Custom code
 from BasicCustomSwitch import TestSwitch, CCodeSwitch
-from GraphmlTopo import GraphmlTopo
+from topology_generators.GraphmlTopo import GraphmlTopo
 
 def logTest():
     '''
