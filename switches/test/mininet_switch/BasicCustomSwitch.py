@@ -59,7 +59,15 @@ class CCodeSwitch(Node):
     def start(self, controllers):
         # Start the C program in the background
         print(f"Starting CCodeSwitch {self.name}")
-        self.process = subprocess.Popen(['./switches/switch_logic', self.name])
+
+        # Open the log file in write mode
+        with open('test.log', 'w') as log_file:
+            # Start the process
+            self.process = subprocess.Popen(
+                ['/home/pjw7904/MTP-Mininet/switches/test/bin/switch_logic_print', self.name],
+                stdout=log_file,
+                stderr=subprocess.STDOUT)
+
 
     def stop(self):
         # Ensure the process is terminated

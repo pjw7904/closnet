@@ -40,7 +40,7 @@ def CCodeTest():
     '''
 
     # Define the topology type
-    testTopology = GraphmlTopo("graphs/host_test.graphml", "h")
+    testTopology = GraphmlTopo("topologies/graphml/host_test.graphml", "h")
 
     # Define the network, use the C CODE SWITCH
     net = Mininet(topo=testTopology, 
