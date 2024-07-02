@@ -11,8 +11,8 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
 # Custom code
-from BasicCustomSwitch import TestSwitch, CCodeSwitch
-from topology_generators.GraphmlTopo import GraphmlTopo
+from switches.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
+from topologies.generators.GraphmlTopo import GraphmlTopo
 
 def logTest():
     '''
