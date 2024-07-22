@@ -839,3 +839,37 @@ class MTPConfig(ClosGenerator):
             intfName = f"intf-{otherNode}"
 
         return intfName
+    
+    def jsonGraphInfo(self):
+            '''
+            Get a JSON-formatted output of the graph information
+            
+            :returns: JSON object containing the folded-Clos configuration.
+            '''
+
+            jsonData = {"protocol": self.PROTOCOL,
+                        "tiers": self.numTiers,
+                        "ports": self.sharedDegree
+                        }
+
+            for tier in reversed(range(self.numTiers+1)):
+                nodes = [v for v in self.clos if self.clos.nodes[v]["tier"] == tier]
+                jsonData[f"tier_{tier}"] = {}
+
+                for node in sorted(nodes):
+                    jsonData[f"tier_{tier}"][node] = {"northbound": [], 
+                                                    "southbound": []}
+
+                    for northNode in self.clos.nodes[node]["northbound"]:
+                        addr = self.clos.nodes[node]["ipv4"][northNode]
+                        jsonData[f"tier_{tier}"][node]["northbound"].append(f"{northNode} - {addr}")
+
+                    if(tier == self.LEAF_TIER and self.singleComputeSubnet):
+                        addr = self.clos.nodes[node]["ipv4"]["compute"]
+                        jsonData[f"tier_{tier}"][node]["southbound"].append(f"compute - {addr}")
+                    else:
+                        for southNode in self.clos.nodes[node]["southbound"]:
+                            addr = self.clos.nodes[node]["ipv4"][southNode]
+                            jsonData[f"tier_{tier}"][node]["southbound"].append(f"{southNode} - {addr}")
+
+            return jsonData
