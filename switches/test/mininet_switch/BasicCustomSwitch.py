@@ -26,6 +26,7 @@ class TestSwitch(Switch):
         # Call the superclass Switch constructor with name and the keyword argument.
         Switch.__init__(self, name, **kwargs)
 
+
     def start(self, controllers):
         '''
         Startup procedure for test switch.
@@ -38,9 +39,11 @@ class TestSwitch(Switch):
         logFile.write("If you see this, yay!")
         logFile.close()
 
+
     def attach(self, intf):
         "Connect a data port"
         assert(0)
+
 
     def detach(self, intf):
         "Disconnect a data port"
@@ -55,6 +58,7 @@ class CCodeSwitch(Node):
     def __init__(self, name, **params):
         super(CCodeSwitch, self).__init__(name, **params)
         self.process = None
+
 
     def start(self, controllers):
         # Start the C program in the background
@@ -76,9 +80,11 @@ class CCodeSwitch(Node):
             self.process.wait()
             print(f"CCodeSwitch {self.name} stopped")
 
+
     def attach(self, intf):
         "Connect a data port"
         assert(0)
+
 
     def detach(self, intf):
         "Disconnect a data port"
