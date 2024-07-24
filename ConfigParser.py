@@ -28,10 +28,9 @@ def parseArgs() -> argparse.Namespace:
                            metavar='numOfPorts', 
                            help="The number of ports each switch has in the folded-Clos topology.")
     
-    argParser.add_argument("-s", "-southbound",
+    argParser.add_argument("-s", "--southbound",
                             nargs=2, action='append', type=int, 
                             help='The number of links to a tier below by specficing the tier and the number of southbound ports per switch.')
-
 
     # Parse the arguments
     args = argParser.parse_args()
@@ -69,8 +68,10 @@ def generateTestName(config: argparse.Namespace):
 
     name = f"{config.protocol}_{config.tiers}_{config.ports}"
 
-    #if(config.southbound):
-    #    for tierKey, portValue in portModifications.items():
-    #        name += f"_{tierKey}-{portValue}"
+    if(config.southbound):
+        for portCountChange in config.southbound:
+            tier = portCountChange[0]
+            portCount = portCountChange[1]
+            name += f"_{tier}-{portCount}"
 
     return name
