@@ -14,39 +14,81 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
 # Custom libraries
-from generators.ClosGenerator import MTPConfig
+from generators.ClosGenerator import ClosGenerator, MTPConfig
 from ConfigParser import *
+
+# Constants
+CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
+GRAPHML_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/graphml")
+
+
+def loadTopologyConfig(topologyName: str):
+    '''
+    load a JSON-formatted configuration file for the topology.
+
+    :param topologyName: The name for the topology.
+    '''
+
+    topologyConfig = None
+
+    for testName in os.listdir(CLOS_TOPOS_DIR):
+        if(testName.startswith(topologyName)):
+            with open(os.path.join(CLOS_TOPOS_DIR, testName)) as configFile:
+                topologyConfig = nx.node_link_graph(json.load(configFile))
+                break
+
+    return topologyConfig
+
+
+def saveTopologyConfig(topologyName: str, topology: ClosGenerator):
+    '''
+    Save a JSON-formatted configuration file for the topology.
+
+    :param topologyName: The name for the topology.
+    :param topologyConfig: The topology configuration.
+    '''
+
+    topologyConfig = nx.node_link_data(topology.clos)
+
+    fileName = f"{topologyName}.json"
+    with open(os.path.join(CLOS_TOPOS_DIR, fileName), mode="w") as configFile:
+        json.dump(topologyConfig, configFile)
+
+    return
 
 
 def main():
     '''
-    Entry into the program, allows you to pick a protocol and topology to run.
+    Entry into the program. Design a folded-Clos topology and pick a protocol to install on it.
     '''
 
-    CLOS_TOPOS_DIR = "topologies/clos"
-    GRAPHML_TOPOS_DIR = "topologies/graphml"
-    
+    # Grab command-line arguments to build the topology
+    config = parseArgs()
+
     # Validate the folded-Clos configuration and determine if this topology already has been saved.
-    configArguments = parseArgs()
+    topologyStatus = validateTopology(config)
+    validTopology = topologyStatus[0] # valid = True, not valid = False
+    topologyMessage = topologyStatus[1] # prints out a message for the user
 
-    topologyStatus = validateTopology(configArguments)
-    validTopology = topologyStatus[0]
-    topologyMessage = topologyStatus[1]
-
+    # If the topology designed is not a valid folded-Clos topology, end the program
     print(topologyMessage)
     if(not validTopology):
         exit(0)
 
-    topologyName = generateTestName(configArguments)
-    print(topologyName)
+    # Generate the name associated with this particular topology
+    topologyName = generateTestName(config)
+    print(f"Topology name = {topologyName}")
 
-    # Build the topology based on the protocol chosen.
-    #topology = MTPConfig(4,3)
-    #topology.buildGraph()
-    # os.path.dirname(__file__)
-    #data = nx.node_link_data(topology.clos, name="node")
-    #with open(f'{os.getcwd()}/MTP-Mininet/test.json', "w") as outfile:
-    #    json.dump(data, outfile)
+    # Determine if this topology already has a configuration
+    topology = loadTopologyConfig(topologyName)
+
+    if(not topology):
+        # Build the topology configuration based on the protocol chosen.
+        topology = MTPConfig(config.ports, config.tiers)
+        topology.buildGraph()
+        saveTopologyConfig(topologyName, topology) # Save the topology configuration
+    else:
+        print("topology exists!")
 
 
 if __name__ == "__main__":
