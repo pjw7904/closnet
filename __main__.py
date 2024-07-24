@@ -22,15 +22,17 @@ CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
 GRAPHML_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/graphml")
 
 
-def loadTopologyConfig(topologyName: str):
+def loadTopologyConfig(topologyName: str) -> nx.graph:
     '''
     load a JSON-formatted configuration file for the topology.
 
     :param topologyName: The name for the topology.
+    :returns: The topology configuration as a NetworkX graph.
     '''
 
     topologyConfig = None
 
+    # Loop through all files in the topologies/clos directory to attempt to find a match.
     for testName in os.listdir(CLOS_TOPOS_DIR):
         if(testName.startswith(topologyName)):
             with open(os.path.join(CLOS_TOPOS_DIR, testName)) as configFile:
@@ -40,12 +42,12 @@ def loadTopologyConfig(topologyName: str):
     return topologyConfig
 
 
-def saveTopologyConfig(topologyName: str, topology: ClosGenerator):
+def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> None:
     '''
     Save a JSON-formatted configuration file for the topology.
 
     :param topologyName: The name for the topology.
-    :param topologyConfig: The topology configuration.
+    :param topology: The topology configuration.
     '''
 
     topologyConfig = nx.node_link_data(topology.clos)
