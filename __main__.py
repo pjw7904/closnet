@@ -42,12 +42,13 @@ def loadTopologyConfig(topologyName: str) -> nx.graph:
     return topologyConfig
 
 
-def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> None:
+def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> nx.graph:
     '''
     Save a JSON-formatted configuration file for the topology.
 
     :param topologyName: The name for the topology.
     :param topology: The topology configuration.
+    :returns: The topology configuration as a NetworkX graph.
     '''
 
     topologyConfig = nx.node_link_data(topology.clos)
@@ -56,7 +57,7 @@ def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> None:
     with open(os.path.join(CLOS_TOPOS_DIR, fileName), mode="w") as configFile:
         json.dump(topologyConfig, configFile)
 
-    return
+    return topologyConfig
 
 
 def main():
@@ -84,11 +85,11 @@ def main():
     # Determine if this topology already has a configuration
     topology = loadTopologyConfig(topologyName)
 
+    # Build the topology configuration based on the protocol chosen if the config is new.
     if(not topology):
-        # Build the topology configuration based on the protocol chosen.
         topology = MTPConfig(config.ports, config.tiers)
         topology.buildGraph()
-        saveTopologyConfig(topologyName, topology) # Save the topology configuration
+        topology = saveTopologyConfig(topologyName, topology) # Save the topology configuration
     else:
         print("topology exists!")
 
