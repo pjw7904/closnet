@@ -15,7 +15,7 @@ class ClosConfigTopo(Topo):
         self.clos = clos
         self.addedNodes = {}
 
-        for edge in clos.edges:
+        for edge in clos.edges():
             node1 = self.getNode(edge[0])
             node2 = self.getNode(edge[1])
             self.addLink(node1, node2)
