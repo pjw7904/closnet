@@ -108,9 +108,9 @@ class ClosGenerator:
         name = self.getNodeTitle(currentTier, topTier)
 
         if(currentTier == topTier):
-            name += "-"
+            name += "_"
         else:
-            name += prefix + "-"
+            name += prefix + "_"
 
         name += nodeNum
 
@@ -816,29 +816,6 @@ class MTPConfig(ClosGenerator):
                     
                     yield (computeNetwork, self.generateFabricNetworkName(network, networkType)) if fabricFormating else computeNetwork
 
-    def generateFabricNetworkName(self, network, networkType):
-        if(networkType == "edge"): 
-            if(self.singleComputeSubnet == True):
-                name = f"edge-{network[0]}-compute" # network[0] will always be the leaf when iterNetwork is called
-            else:
-                name = f"edge-{network[0]}-{network[1]}"
-        else:
-            if(self.clos.nodes[network[0]]["tier"] > self.clos.nodes[network[1]]["tier"]):
-                name = f"core-{network[0]}-{network[1]}"
-            else:
-                name = f"core-{network[1]}-{network[0]}"
-
-        return name
-
-    def generateFabricIntfName(self, node, network):
-        otherNode = network[1] if network[0] == node else network[0]
-
-        if(self.clos.nodes[node]["tier"] == self.LEAF_TIER and self.clos.nodes[otherNode]["tier"] == self.COMPUTE_TIER and self.singleComputeSubnet == True):
-            intfName = f"intf-compute"
-        else:
-            intfName = f"intf-{otherNode}"
-
-        return intfName
     
     def jsonGraphInfo(self):
             '''
