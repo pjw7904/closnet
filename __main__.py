@@ -1,7 +1,6 @@
 # Core libraries
 import json
 import os
-import argparse
 from sys import exit
 
 # External libraries
@@ -15,6 +14,8 @@ from mininet.cli import CLI
 
 # Custom libraries
 from generators.ClosGenerator import ClosGenerator, MTPConfig
+from generators.ClosConfigTopo import ClosConfigTopo
+from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
 from ConfigParser import *
 
 # Constants
@@ -92,6 +93,21 @@ def main():
         topology = saveTopologyConfig(topologyName, topology) # Save the topology configuration
     else:
         print("topology exists!")
+
+    # Build the folded-Clos topology in Mininet
+    mininetTopology = ClosConfigTopo(topology)
+
+    # Define the Mininet
+    net = Mininet(topo=mininetTopology, 
+                  switch=CCodeSwitch,
+                  controller=None)
+
+    # Run the experiment
+    net.start()
+    CLI(net)
+    net.stop()
+    
+    return   
 
 
 if __name__ == "__main__":
