@@ -68,7 +68,7 @@ class CCodeSwitch(Node):
         with open(f'{self.name}.log', 'w') as log_file:
             # Start the process
             self.process = subprocess.Popen(
-                ['./switches/test/bin/switch_logic_print', self.name],
+                ['./MTP-Mininet/switches/test/bin/switch_logic_print', self.name],
                 stdout=log_file,
                 stderr=subprocess.STDOUT)
 
