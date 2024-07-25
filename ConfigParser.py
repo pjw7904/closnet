@@ -47,7 +47,7 @@ def validateTopology(config: argparse.Namespace) -> tuple:
     '''
 
     # Check number of tiers
-    if not (2 < config.tiers < 10):
+    if not (2 <= config.tiers <= 10):
         return (False, "Number of tiers configuration is invalid, (2-10 tiers supported)")
     
     # Check number of ports
