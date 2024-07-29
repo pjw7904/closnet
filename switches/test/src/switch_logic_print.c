@@ -10,6 +10,23 @@
 #include <sys/stat.h> // For check of directory
 #include <errno.h>
 
+
+// Function to extract and print the number after "eth" in the interface name
+void print_port_number(const char *ifa_name) 
+{
+    // Find the "eth" substring in ifa_name
+    const char *eth_position = strstr(ifa_name, "eth");
+
+    if (eth_position != NULL) 
+    {
+        // Move past the "eth" substring
+        eth_position += 3;
+
+        // Print the number following "eth"
+        printf("\tPort number: %s\n", eth_position);
+    }
+}
+
 // Mininet interfaces always start with the node name (ex: sw121-eth1), so we can use this to filter out the host interfaces.
 void print_interfaces(const char* switch_name) 
 {
@@ -35,6 +52,9 @@ void print_interfaces(const char* switch_name)
             // Print interface name
             printf("Interface: %s\n", ifa->ifa_name);
 
+            // Print the port number (substring after the dash)
+            print_port_number(ifa->ifa_name);
+
             // For an AF_INET* interface address, display the address
             if (family == AF_INET || family == AF_INET6) {
                 s = getnameinfo(ifa->ifa_addr,
@@ -55,6 +75,8 @@ void print_interfaces(const char* switch_name)
 
     return;
 }
+
+
 // Function to validate if a given path is a directory
 int is_valid_directory(const char *path) 
 {
@@ -81,6 +103,7 @@ int is_valid_directory(const char *path)
     
     return 0;  // It's not a valid directory
 }
+
 
 int main(int argc, char *argv[]) 
 {
