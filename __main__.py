@@ -17,6 +17,7 @@ from generators.ClosGenerator import ClosGenerator, MTPConfig
 from generators.ClosConfigTopo import ClosConfigTopo
 from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
 from ConfigParser import *
+from ConfigGenerator import *
 
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
@@ -93,6 +94,9 @@ def main():
         topology = saveTopologyConfig(topologyName, topology) # Save the topology configuration
     else:
         print("topology exists!")
+
+    # Define configuration files for the protocol run on the topology
+    generateConfigMTP(topology)
 
     # Build the folded-Clos topology in Mininet
     mininetTopology = ClosConfigTopo(topology)
