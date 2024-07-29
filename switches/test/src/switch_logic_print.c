@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/stat.h> // For check of directory
+#include <errno.h>
 
 // Mininet interfaces always start with the node name (ex: sw121-eth1), so we can use this to filter out the host interfaces.
 void print_interfaces(const char* switch_name) 
@@ -50,17 +52,56 @@ void print_interfaces(const char* switch_name)
     }
 
     freeifaddrs(ifaddr);
+
+    return;
+}
+// Function to validate if a given path is a directory
+int is_valid_directory(const char *path) 
+{
+    struct stat sb;
+
+    // Check if the path exists and is a directory
+    if(stat(path, &sb) == 0) 
+    {
+        if(S_ISDIR(sb.st_mode)) 
+        {
+            return 1;  // It's a valid directory
+        } 
+        
+        else 
+        {
+            fprintf(stderr, "Error: '%s' exists but is not a directory.\n", path);
+        }
+    } 
+    
+    else 
+    {
+        fprintf(stderr, "Error: Cannot access '%s': %s\n", path, strerror(errno));
+    }
+    
+    return 0;  // It's not a valid directory
 }
 
 int main(int argc, char *argv[]) 
 {
-    if (argc != 2) 
+    if(argc != 3) 
     {
-        fprintf(stderr, "Usage: %s <node_name>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <node_name> <log_directory>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    // Run the function
+    // Run the functions
+    if(is_valid_directory(argv[2])) 
+    {
+        printf("'%s' is a valid directory.\n", argv[2]);
+        // You can now safely pass this path to other functions
+    } 
+    else
+    {
+        fprintf(stderr, "Error: '%s' is not a valid directory.\n", argv[2]);
+        return 1;
+    }
+
     print_interfaces(argv[1]);
 
     return 0;
