@@ -11,14 +11,20 @@ class ClosConfigTopo(Topo):
     LEAF_TIER = 1
     COMPUTE_TIER = 0
 
-    def build(self, clos: nx.graph):
+    def build(self, clos: nx.graph) -> None:
         self.clos = clos
         self.addedNodes = {}
 
         for edge in clos.edges():
+            # Add the nodes to the topology
             node1 = self.getNode(edge[0])
             node2 = self.getNode(edge[1])
-            self.addLink(node1, node2)
+
+            # Configure IPv4 addressing if necessary
+            node1Address, node2Address = self.getIPv4Addressing(node1, node2)
+
+            # Add the link between the nodes to the topology
+            self.addLink(node1, node2, params1=node1Address, params2=node2Address)
 
         return
 
@@ -40,6 +46,19 @@ class ClosConfigTopo(Topo):
             mininetNode = self.addedNodes[node]
 
         return mininetNode
+
+
+    def getIPv4Addressing(self, node1: str, node2: str) -> tuple:
+        node1Address = None
+        node2Address = None
+
+        if node2 in self.clos.nodes[node1]['ipv4']:
+            node1Address = {'ip': f"{self.clos.nodes[node1]['ipv4'][node2]}/24"}
+
+        if node1 in self.clos.nodes[node2]['ipv4']:
+            node2Address = {'ip': f"{self.clos.nodes[node2]['ipv4'][node1]}/24"}
+
+        return node1Address, node2Address
 
 
 # Add topology to custom option.
