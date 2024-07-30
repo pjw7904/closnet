@@ -5,11 +5,54 @@
 #include "mtp_utils.h"
 #include "mtp_struct.h"
 
-void readConfigurationFile(Config *config) 
+int isValidDirectory(const char *path) 
+{
+    struct stat sb;
+
+    // Check if the path exists and is a directory
+    if(stat(path, &sb) == 0) 
+    {
+        if(S_ISDIR(sb.st_mode)) 
+        {
+            return 1;  // It's a valid directory
+        } 
+        
+        else 
+        {
+            fprintf(stderr, "Error: '%s' exists but is not a directory.\n", path);
+        }
+    } 
+    
+    else 
+    {
+        fprintf(stderr, "Error: Cannot access '%s': %s\n", path, strerror(errno));
+    }
+    
+    return 0;  // It's not a valid directory
+}
+
+char* getConfigFilePath(const char* directory, const char* name) 
+{
+    // Allocate memory for the full path
+    char* configFilePath = malloc(MAX_FILE_PATH_LENGTH);
+
+    if (configFilePath == NULL) 
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Create the full path in the format: <directory>/<name>.conf
+    snprintf(configFilePath, MAX_FILE_PATH_LENGTH, "%s/%s.conf", directory, name);
+
+    return configFilePath;
+}
+
+void readConfigurationFile(Config *config, const char* configFile) 
 {
     // Access the configuration file.
-    FILE *fp = fopen("mtp.conf", "r");
-    if (!fp) 
+    FILE *fp = fopen(configFile, "r");
+    if(!fp) 
     {
         perror("\nFailed to open config file\n");
         return;
@@ -33,20 +76,6 @@ void readConfigurationFile(Config *config)
         // Grab the configuration value and remove the newline.
         char *value = strtok(NULL, "\n"); 
         if(value == NULL) continue;
-        
-        
-        // Determine if the MTP node is a leaf. 
-        if (strcmp(configName, "isLeaf") == 0) 
-        {
-            config->isLeaf = strcmp("true", value) == 0 ? 1 : 0;
-        } 
-        
-
-        // Determine if the MTP node is a leaf. 
-        if (strcmp(configName, "isLeaf") == 0) 
-        {
-            config->isLeaf = strcmp("true", value) == 0 ? 1 : 0;
-        } 
         
         // Determine if the MTP node is a spine and at the top tier. 
         if(strcmp(configName, "isTopSpine") == 0) 

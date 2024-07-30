@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 /*
  * Custom MTP imports.
@@ -23,7 +25,7 @@
 /*****************************************
  * CONSTANTS 
  *****************************************/
-// None
+#define MAX_FILE_PATH_LENGTH 1024
 
 /*****************************************
  * STRUCTURES 
@@ -42,6 +44,8 @@ typedef struct Config {
 /*****************************************
  * FUNCTION PROTOTYPES 
  *****************************************/
-void readConfigurationFile(Config *config);
+void readConfigurationFile(Config *config, const char* configFile);
+int isValidDirectory(const char *path);
+char* getConfigFilePath(const char* directory, const char* name);
 
 #endif

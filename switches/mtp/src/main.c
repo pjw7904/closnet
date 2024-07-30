@@ -79,6 +79,14 @@ void handleSIGINT(int sig);
 
 int main(int argc, char **argv)
 {
+
+    // Make sure there are three command-line arguments (program name, node name, directory of config file)
+    if(argc != 3) 
+    {
+        fprintf(stderr, "Usage: %s <node_name> <config_directory>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     // Set up a SIGINT (CTRL + C) handler to gracefully stop running MTP.
     if(signal(SIGINT, handleSIGINT) == SIG_ERR)
     {
@@ -86,18 +94,31 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    /*
-        START-UP STAGE
-        -----------------------------------------------------------------------------
-        When the protocol starts up, process the inital configuration via the configuration file
-        and by defining MTP-speaking interfaces on the device. If the local system is a leaf node,
-        find the compute subnet interface IPv4 address and use that to generate its root VID.
 
-        Sockets and other necessary memory will be defined as well.
+    /*  CONFIGURATION DEFINITION
+        -----------------------------------------------------------------------------
+        Define how the MTP switch should operate through external configuration.
         -----------------------------------------------------------------------------
     */
-    readConfigurationFile(&mtpConfig);
+    // If the inputted config directory is not valid, stop the program.
+    if(!isValidDirectory(argv[2])) 
+    {
+        fprintf(stderr, "Error: '%s' is not a valid directory.\n", argv[2]);
+        return 1;
+    }
 
+    // Read in the configuration for the MTP switch.
+    char* configFilePath = getConfigFilePath(argv[2], argv[1]);
+    readConfigurationFile(&mtpConfig, configFilePath);
+    free(configFilePath);
+
+
+    /*  INTERFACE TYPE DEFINITION
+        -----------------------------------------------------------------------------
+        Define which network interfaces are valid and if they are control or
+        compute interfaces. 
+        -----------------------------------------------------------------------------
+    */
     // Use ifaddrs structure to loop through network interfaces on the system.
     struct ifaddrs *ifaddr;
     if(getifaddrs(&ifaddr) == -1) 
