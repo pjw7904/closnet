@@ -98,7 +98,7 @@ struct control_port* build_control_port(char* new_port_name);
 struct control_port* find_control_port_by_name(struct control_port* cp_head, char* port_name);
 struct control_port* remove_control_port_by_name(struct control_port* cp_head, char* port_name);
 struct control_port* clear_control_port(struct control_port* node);
-struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf);
+struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf, const char* nodeName);
 int is_all_down(struct control_port* cp_head);
 void print_control_port_table(struct control_port* cp_head);
 void initalizeControlSocketResources(int* socketfd, struct control_port* cp_head);
@@ -106,7 +106,7 @@ void initalizeControlSocketResources(int* socketfd, struct control_port* cp_head
 // ====================== function for compute interfaces ====================== //
 compute_interface *addComputeInteface(compute_interface *ci_head, char *new_port_name);
 compute_interface *buildComputeInterface(char *new_port_name);
-compute_interface *setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf);
+compute_interface *setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf, const char* nodeName);
 compute_interface *freeComputeInterfaces(compute_interface *interface);
 void initalizeComputeSocketResources(int *socketfd, compute_interface *ci_head);
 void printComputeInterfaces(compute_interface *head);

@@ -99,7 +99,7 @@ void readConfigurationFile(Config *config, const char* configFile)
     fclose(fp);
 }
 
-compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf)
+compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf, const char* nodeName)
 {
     struct ifaddrs *ifa;
     int family;
@@ -123,10 +123,9 @@ compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSub
         // AF_INET = IPv4 addressing.
         family = ifa->ifa_addr->sa_family;
 
-        // If the interface is active/up, contains an IPv4 address, and is not named eth0 or lo (loopback).
+        // If the interface is active/up, contains an IPv4 address, and contains the name of the node in the interface.
         if(family == AF_INET && 
-            strcmp(ifa->ifa_name, "eth0") != 0 && 
-            strcmp(ifa->ifa_name, "lo") != 0 && 
+            strncmp(ifa->ifa_name, nodeName, strlen(nodeName)) == 0 && 
             (ifa->ifa_flags & IFF_UP) != 0)
         {
             // Mark the interface name as part of the compute interface table, and then copy the interface name seperately.
@@ -141,7 +140,7 @@ compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSub
     return compute_intf_head;
 }
 
-struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf) 
+struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeSubnetIntfName, bool isLeaf, const char* nodeName) 
 {
     // Use ifaddrs structure to loop through network interfaces on the system.
     struct ifaddrs *ifa;
@@ -160,8 +159,7 @@ struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeS
 
         // If the interface is active/up, and is not named eth0 or lo (loopback).
         if(family == AF_PACKET && 
-            strcmp(ifa->ifa_name, "eth0") != 0 && 
-            strcmp(ifa->ifa_name, "lo") != 0 &&
+            strncmp(ifa->ifa_name, nodeName, strlen(nodeName)) == 0 &&
             (ifa->ifa_flags & IFF_UP) != 0) 
         {
             // If the node is a leaf and this is the compute interface, skip it.
