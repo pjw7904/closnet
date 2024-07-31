@@ -75,7 +75,7 @@ void handle_receive_from_server(unsigned char* recvBuffer_IP,char* recvOnEtherPo
 /*
  * Function prototype to handle SIGINT (SIGINT) and stopping MTP.
 */
-void handleSIGINT(int sig);
+void handleSignal(int sig);
 
 int main(int argc, char **argv)
 {
@@ -96,8 +96,15 @@ int main(int argc, char **argv)
     char *nodeName = argv[1];
     char *configDirectory = argv[2];
 
+    // Set up a SIGHUP (signal hangup) handler to gracefully stop running MTP.
+    if(signal(SIGHUP, handleSignal) == SIG_ERR) 
+    {
+        perror("signal");
+        exit(EXIT_FAILURE);
+    }
+
     // Set up a SIGINT (CTRL + C) handler to gracefully stop running MTP.
-    if(signal(SIGINT, handleSIGINT) == SIG_ERR)
+    if(signal(SIGINT, handleSignal) == SIG_ERR)
     {
         perror("signal");
         exit(EXIT_FAILURE);
@@ -458,7 +465,7 @@ int main(int argc, char **argv)
 } // End of main function.
 
 
-void handleSIGINT(int sig)
+void handleSignal(int sig)
 {
     long long current_timestamp = get_milli_sec(&current_time);
 
@@ -480,7 +487,7 @@ void handleSIGINT(int sig)
     fflush(fptr);
     fclose(fptr);
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 void handle_receive_hello_NR(unsigned char* recvBuffer_MTP, char* recvOnEtherPort){
