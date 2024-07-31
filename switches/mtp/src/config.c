@@ -157,7 +157,7 @@ struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeS
         // Grab the interface family (AF_INET = IPv4 addressing, AF_PACKET = raw layer 2).
         family = ifa->ifa_addr->sa_family;
 
-        // If the interface is active/up, and is not named eth0 or lo (loopback).
+        // If the interface is active/up, and contains the node name in the interface name.
         if(family == AF_PACKET && 
             strncmp(ifa->ifa_name, nodeName, strlen(nodeName)) == 0 &&
             (ifa->ifa_flags & IFF_UP) != 0) 

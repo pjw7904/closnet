@@ -77,7 +77,7 @@
  * @param dest destination array to store ethernet interface name
  * @return uint8_t total working ethernet interface
  */
-uint8_t get_all_ethernet_interface2(char** dest);
+uint8_t get_all_ethernet_interface2(char** dest, const char* nodeName);
 
 /**
  * @brief Get the VID by ethernet interface object

@@ -4,7 +4,8 @@
 
 
 // it is different from previous one, it stores the port data to a 2d array
-uint8_t get_all_ethernet_interface2(char** dest){
+uint8_t get_all_ethernet_interface2(char** dest, const char* nodeName)
+{
     uint8_t counter = 0;
     struct ifaddrs *addrs, *tmp;                                        
 
@@ -14,18 +15,24 @@ uint8_t get_all_ethernet_interface2(char** dest){
         exit(EXIT_FAILURE);
     }
 
-    tmp = addrs;                 // initialize tmp to where addresses are stored
+    tmp = addrs; // initialize tmp to where addresses are stored
 
-    while( tmp ){
-        if ( tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET ){   
-            if((strcmp(tmp->ifa_name, "lo")) && (strcmp(tmp->ifa_name, "eth0")) && (tmp->ifa_flags & IFF_UP) != 0 ){
+    while(tmp)
+    {
+        if(tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET)
+        {   
+            if(strncmp(tmp->ifa_name, nodeName, strlen(nodeName)) == 0 && (tmp->ifa_flags & IFF_UP) != 0) 
+            {
                 strcpy(dest[counter],tmp->ifa_name);
                 counter++;
             }
         }
+
         tmp = tmp->ifa_next;
     }
+
     freeifaddrs(addrs);
+
     return counter; // return the size of all working ports
 }
 

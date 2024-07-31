@@ -93,6 +93,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    char *nodeName = argv[1];
+    char *configDirectory = argv[2];
+
     // Set up a SIGINT (CTRL + C) handler to gracefully stop running MTP.
     if(signal(SIGINT, handleSIGINT) == SIG_ERR)
     {
@@ -107,14 +110,14 @@ int main(int argc, char **argv)
         -----------------------------------------------------------------------------
     */
     // If the inputted config directory is not valid, stop the program.
-    if(!isValidDirectory(argv[2])) 
+    if(!isValidDirectory(configDirectory)) 
     {
-        fprintf(stderr, "Error: '%s' is not a valid directory.\n", argv[2]);
+        fprintf(stderr, "Error: '%s' is not a valid directory.\n", configDirectory);
         return 1;
     }
 
     // Read in the configuration for the MTP switch.
-    char* configFilePath = getConfigFilePath(argv[2], argv[1]);
+    char* configFilePath = getConfigFilePath(configDirectory, nodeName);
     readConfigurationFile(&mtpConfig, configFilePath);
     free(configFilePath);
 
@@ -134,8 +137,8 @@ int main(int argc, char **argv)
     }
 
     // Find if a compute interface exists on the node and then find the control (MTP) interfaces.
-    compute_intf_head = setComputeInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, argv[1]);
-    cp_head = setControlInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, argv[1]);
+    compute_intf_head = setComputeInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, nodeName);
+    cp_head = setControlInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, nodeName);
     freeifaddrs(ifaddr); // Free the interface memory.
 
     printf("===MTP START-UP CONFIG===\ntier = %d\nisTopSpine = %d\nisLeaf = %d\ncomputeIntfName = %s\n", 
@@ -268,8 +271,8 @@ int main(int argc, char **argv)
             if_indextoname(tcIP, recvOnEtherPort);     // if_indextoname - map a network interface index to its corresponding name,built in fn.
                 // change name new_node - new connection    
 
-            // If the message comes on eth0, do not process.
-            if ((strcmp(recvOnEtherPort, "eth0")) == 0)
+            // If the message comes on an interface not in the form <nodeName>-ethX, do not process
+            if(strncmp(recvOnEtherPort, nodeName, strlen(nodeName)) != 0)
             { 
                 continue;
             }
@@ -322,10 +325,9 @@ int main(int argc, char **argv)
                 
                 if_indextoname(tcIP, recvOnEtherPort); // Map a network interface index to its corresponding name.
 
-                // If the message comes on eth0, do not process.
-                if (!strcmp(recvOnEtherPort, "eth0"))
+                if(strncmp(recvOnEtherPort, nodeName, strlen(nodeName)) != 0)
                 { 
-                    continue; 
+                    continue;
                 }
                 
                 handle_receive_from_server(recvBuffer_IP,recvOnEtherPort, recv_len_IP); // send data msg here
@@ -333,7 +335,7 @@ int main(int argc, char **argv)
         }
 
         // Send KEEP ALIVE and check the fail of the port
-        uint8_t working_port_num = get_all_ethernet_interface2(temp_2d_port_array);
+        uint8_t working_port_num = get_all_ethernet_interface2(temp_2d_port_array, nodeName);
         for(cp_temp = cp_head;cp_temp;cp_temp = cp_temp->next)
         {
             if(!cp_temp->start) continue;
