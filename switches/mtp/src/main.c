@@ -80,6 +80,12 @@ void handleSIGINT(int sig);
 int main(int argc, char **argv)
 {
 
+    /*  STARTUP
+        -----------------------------------------------------------------------------
+        Make sure that the command-line input is valid and that a graceful shutdown
+        is possible.
+        -----------------------------------------------------------------------------
+    */
     // Make sure there are three command-line arguments (program name, node name, directory of config file)
     if(argc != 3) 
     {
@@ -128,8 +134,8 @@ int main(int argc, char **argv)
     }
 
     // Find if a compute interface exists on the node and then find the control (MTP) interfaces.
-    compute_intf_head = setComputeInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf);
-    cp_head = setControlInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf);
+    compute_intf_head = setComputeInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, argv[1]);
+    cp_head = setControlInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, argv[1]);
     freeifaddrs(ifaddr); // Free the interface memory.
 
     printf("===MTP START-UP CONFIG===\ntier = %d\nisTopSpine = %d\nisLeaf = %d\ncomputeIntfName = %s\n", 
