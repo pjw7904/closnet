@@ -16,6 +16,7 @@ from mininet.cli import CLI
 from generators.ClosGenerator import ClosGenerator, MTPConfig
 from generators.ClosConfigTopo import ClosConfigTopo
 from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
+from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch
 from ConfigParser import *
 from ConfigGenerator import *
 
@@ -103,7 +104,7 @@ def main():
 
     # Define the Mininet
     net = Mininet(topo=mininetTopology, 
-                  switch=CCodeSwitch,
+                  switch=MTPSwitch,
                   controller=None)
 
     # Run the experiment
