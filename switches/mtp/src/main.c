@@ -110,6 +110,13 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    // Set up a SIGTERM (signal terminate) handler to gracefully stop running MTP.
+    if (signal(SIGTERM, handleSignal) == SIG_ERR) 
+    {
+        perror("signal");
+        exit(EXIT_FAILURE);
+    }
+
 
     /*  CONFIGURATION DEFINITION
         -----------------------------------------------------------------------------
