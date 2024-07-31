@@ -187,7 +187,8 @@ int main(int argc, char **argv)
 	}
 
     // init send socket
-    if((socketfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
+    if((socketfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) 
+    {
 		perror("Socket Error");
         exit(1);
 	}
@@ -493,20 +494,20 @@ void handle_receive_hello_NR(unsigned char* recvBuffer_MTP, char* recvOnEtherPor
     send_join_req( recvOnEtherPort, temp_2d_array,numOfVID); 
 }
 
-
-void handle_receive_join_req(unsigned char* recvBuffer_MTP,char* recvOnEtherPort){
+void handle_receive_join_req(unsigned char* recvBuffer_MTP,char* recvOnEtherPort)
+{
     printf("\n Join Request Received\n");
 
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 15,0);
 
-    //build the extension of VID
-    for(uint16_t i = 0;i < numOfVID;i++){
+    //build the extension of the VID by adding a period (".") and the outgoing interface number
+    for(uint16_t i = 0;i < numOfVID;i++)
+    {
         append_port_number_after_VID(recvOnEtherPort,temp_2d_array[i]);
     }
 
     send_join_res(recvOnEtherPort,temp_2d_array,numOfVID); 
 }
-
 
 void handle_receive_join_res(unsigned char* recvBuffer_MTP,char* recvOnEtherPort){
     printf("\n Join Response Received\n");

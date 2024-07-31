@@ -85,12 +85,23 @@ uint8_t get_tier_from_hello_message(char *payload_with_VID_data){
     return tier_counter;
 }
 
-// append ethernet interface number to a VID
-void append_port_number_after_VID(char *port_name, char *dest){
-    strcat(dest,".");
-    int k = 0;
-    while(port_name[k] < '0' || port_name[k] > '9') k++;
-    strcat(dest, port_name + k);
+// append ethernet interface number to a VID (updated for Mininet interface formatting)
+void append_port_number_after_VID(char *ifa_name, char *dest)
+{
+    // Find the "eth" substring in ifa_name
+    const char *eth_position = strstr(ifa_name, "eth");
+
+    if (eth_position != NULL) 
+    {
+        // Move past the "eth" substring
+        eth_position += 3;
+
+        // <dest>.<eth_position> = updated VID
+        strcat(dest, ".");
+        strcat(dest, eth_position);
+    }
+
+    return;
 }
 
 // extract all VID from the receive buff, then store them to a 2d array
