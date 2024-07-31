@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
+#include <unistd.h> 
 
 /*
  * Custom MTP imports.
@@ -250,6 +251,9 @@ int main(int argc, char **argv)
 
         // Store the root VID in the tempoprary array to be sent in the initial messages.
         strcpy(temp_2d_array[0], my_VID);
+
+        // Wait for everyone to come up before sending things out (temp fix)
+        sleep(3);
 
         // Begin telling tier 2 spines about the existence of this leaf via Hello No-Response (Hello NR) messages 
         for(cp_temp = cp_head; cp_temp; cp_temp = cp_temp->next)
