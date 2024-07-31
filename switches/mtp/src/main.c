@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 
     // Initalize an array to add interface names to as necessary.
     temp_2d_port_array = malloc(32 * sizeof(char*));
-    for(int j = 0; j < 10; j++)
+    for(int j = 0; j < 32; j++)
     {
         temp_2d_port_array[j] = malloc(VID_LEN);
         memset(temp_2d_port_array[j], '\0', VID_LEN);
