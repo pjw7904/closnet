@@ -81,6 +81,12 @@ def main():
     if(not validTopology):
         exit(0)
 
+    # Configure the custom southbound port density ranges if necessary
+    if(config.southbound):
+        portDensityModifications = {tier[0]: tier[1] for tier in config.southbound}
+    else:
+        portDensityModifications = None
+
     # Generate the name associated with this particular topology
     topologyName = generateTestName(config)
     print(f"Topology name = {topologyName}")
@@ -90,7 +96,7 @@ def main():
 
     # Build the topology configuration based on the protocol chosen if the config is new.
     if(not topology):
-        topology = MTPConfig(config.ports, config.tiers)
+        topology = MTPConfig(config.ports, config.tiers, southboundPortsConfig=portDensityModifications)
         topology.buildGraph()
         topology = saveTopologyConfig(topologyName, topology) # Save the topology configuration
     else:
