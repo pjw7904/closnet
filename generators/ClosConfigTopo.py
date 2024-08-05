@@ -35,7 +35,10 @@ class ClosConfigTopo(Topo):
                 mininetNode = self.addSwitch(node)
 
             elif(self.clos.nodes[node]['tier'] == self.COMPUTE_TIER):
-                mininetNode = self.addHost(node)
+                hostIPDict = self.clos.nodes[node].get('ipv4')
+                hostIP = list(hostIPDict.values())[0]
+                    
+                mininetNode = self.addHost(node, ip=f"{hostIP}/24")
 
             else:
                 raise Exception(f"{node} does not have a normal tier value, not adding.")

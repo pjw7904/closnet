@@ -1,8 +1,5 @@
-from mininet.node import Switch
-from mininet.node import Node
-from mininet.log import info
+from mininet.node import Node, Host
 import subprocess
-import os
 
 class MTPSwitch(Node):
     """
@@ -20,8 +17,8 @@ class MTPSwitch(Node):
         print(f"Starting the MTP implementation on {self.name}")
 
         # Open the log file in write mode
-        with open(f'./MTP-Mininet/logs/{self.name}.log', 'w') as log_file:
-            # Start the process
+        with open(f'./MTP-Mininet/logs/{self.name}.stdout', 'w') as log_file:
+            # Start the process (look into popen() function of node)
             self.process = subprocess.Popen(
                 ['./MTP-Mininet/switches/mtp/bin/mtp', self.name, "/tmp"],
                 stdout=log_file,
@@ -44,3 +41,16 @@ class MTPSwitch(Node):
     def detach(self, intf):
         "Disconnect a data port"
         assert(0)
+
+
+
+class MTPHost(Host):
+    """
+    A host that is used to connect to MTP switches for
+    traffic generation testing. There is nothing
+    special or MTP-specific about the host, it just
+    gets it configured for tests.
+    """
+
+    def __init__(self, name, **params):
+        super(MTPHost, self).__init__(name, **params)
