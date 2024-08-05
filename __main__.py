@@ -16,7 +16,7 @@ from mininet.cli import CLI
 from generators.ClosGenerator import ClosGenerator, MTPConfig
 from generators.ClosConfigTopo import ClosConfigTopo
 from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
-from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch
+from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
 from ConfigParser import *
 from ConfigGenerator import *
 
@@ -60,7 +60,7 @@ def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> nx.graph:
     with open(os.path.join(CLOS_TOPOS_DIR, fileName), mode="w") as configFile:
         json.dump(topologyConfig, configFile)
 
-    return topologyConfig
+    return nx.node_link_graph(json.load(topologyConfig))
 
 
 def main():
@@ -111,6 +111,7 @@ def main():
     # Define the Mininet
     net = Mininet(topo=mininetTopology, 
                   switch=MTPSwitch,
+                  host=MTPHost,
                   controller=None)
 
     # Run the experiment
