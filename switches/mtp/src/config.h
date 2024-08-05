@@ -26,6 +26,8 @@
  * CONSTANTS 
  *****************************************/
 #define MAX_FILE_PATH_LENGTH 1024
+#define CONF_EXT "conf"
+#define LOG_EXT "log"
 
 /*****************************************
  * STRUCTURES 
@@ -46,6 +48,6 @@ typedef struct Config {
  *****************************************/
 void readConfigurationFile(Config *config, const char* configFile);
 int isValidDirectory(const char *path);
-char* getConfigFilePath(const char* directory, const char* name);
+char* getFilePath(const char* directory, const char* name, const char* extension);
 
 #endif

@@ -14,6 +14,7 @@
 #include "mtp_struct.h"
 #include "mtp_build.h"
 #include "config.h"
+#include "logger.h"
 
 /*
  * Configuration variables
@@ -83,8 +84,8 @@ int main(int argc, char **argv)
 
     /*  STARTUP
         -----------------------------------------------------------------------------
-        Make sure that the command-line input is valid and that a graceful shutdown
-        is possible.
+        Confirm that all inputted configuration is valid and that MTP can run as
+        well as shutdown successfully.
         -----------------------------------------------------------------------------
     */
     // Make sure there are three command-line arguments (program name, node name, directory of config file)
@@ -118,12 +119,6 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-
-    /*  CONFIGURATION DEFINITION
-        -----------------------------------------------------------------------------
-        Define how the MTP switch should operate through external configuration.
-        -----------------------------------------------------------------------------
-    */
     // If the inputted config directory is not valid, stop the program.
     if(!isValidDirectory(configDirectory)) 
     {
@@ -132,10 +127,14 @@ int main(int argc, char **argv)
     }
 
     // Read in the configuration for the MTP switch.
-    char* configFilePath = getConfigFilePath(configDirectory, nodeName);
+    char* configFilePath = getFilePath(configDirectory, nodeName, CONF_EXT);
     readConfigurationFile(&mtpConfig, configFilePath);
     free(configFilePath);
 
+    // Set up logging
+    char* logFilePath = getFilePath(configDirectory, nodeName, LOG_EXT);
+    set_log_mode(LOG_TO_FILE, logFilePath);
+    free(logFilePath);
 
     /*  INTERFACE TYPE DEFINITION
         -----------------------------------------------------------------------------
@@ -156,19 +155,19 @@ int main(int argc, char **argv)
     cp_head = setControlInterfaces(ifaddr, mtpConfig.computeIntfName, mtpConfig.isLeaf, nodeName);
     freeifaddrs(ifaddr); // Free the interface memory.
 
-    printf("===MTP START-UP CONFIG===\ntier = %d\nisTopSpine = %d\nisLeaf = %d\ncomputeIntfName = %s\n", 
+    log_message("\n===MTP START-UP CONFIG===\ntier = %d\nisTopSpine = %d\nisLeaf = %d\ncomputeIntfName = %s\n", 
             mtpConfig.tier, mtpConfig.isTopSpine, mtpConfig.isLeaf, mtpConfig.computeIntfName);
 
     // Leaf nodes are the root of the trees, they define the starting (root) VID.
     if(mtpConfig.isLeaf)
     {
         getRootVID(my_VID, mtpConfig.computeIntfName, VID_octet);
-        printf("Root VID: %s\n\n", my_VID);
+        log_message("Root VID: %s\n\n", my_VID);
     }
 
     else
     {
-        printf("Root VID: None\n\n"); 
+        log_message("Root VID: None\n\n"); 
     }
 
     // TO-DO: Ask Vincent about the magic number 32, and why is the port array being given VID_LEN?
@@ -226,11 +225,11 @@ int main(int argc, char **argv)
     {
         if(mtpConfig.isTopSpine) 
         {
-            printf("\nI am a top-tier Spine, waiting for hello message\n"); 
+            log_message("\nI am a top-tier Spine, waiting for hello message\n"); 
         }
         else 
         {
-            printf("\nI am a Spine, waiting for hello message\n"); 
+            log_message("\nI am a Spine, waiting for hello message\n"); 
         }
     }
 
@@ -369,11 +368,11 @@ int main(int argc, char **argv)
                     cp_temp->isUP = 0;
                     cp_temp->fail_type = DETECT_FAIL;
                     cp_temp->continue_count = 0; // reset continue count
-                    printf("Stop sending and receiving message due to immediate failure\n");
-                    printf("Detected a failure, shut down port %s at time %lld\n",cp_temp->port_name,get_milli_sec(&current_time));
+                    log_message("Stop sending and receiving message due to immediate failure\n");
+                    log_message("Detected a failure, shut down port %s at time %lld\n",cp_temp->port_name,get_milli_sec(&current_time));
 
                     if(!mtpConfig.isTopSpine && is_all_offered_ports_down(vop_head)){
-                        printf("All upstream ports down, sending all accepted VIDs from downstream ports\n");
+                        log_message("All upstream ports down, sending all accepted VIDs from downstream ports\n");
                         numOfVID = get_all_accepted_VIDs(vap_head, temp_2d_array);
                         for(vap_temp = vap_head;vap_temp;vap_temp = vap_temp->next){
                             if(vap_temp->cp->isUP){
@@ -381,7 +380,7 @@ int main(int argc, char **argv)
                             }
                         }
                     }else if(find_accepted_port_by_name(vap_head,cp_temp->port_name)){
-                        printf("Failed on downstream port\n");
+                        log_message("Failed on downstream port\n");
                         numOfVID = get_accepted_VIDs_by_port_name(vap_head, cp_temp->port_name, temp_2d_array);
                         for(struct control_port* cp_temp2 = cp_head;cp_temp2;cp_temp2 = cp_temp2->next){
                             if(cp_temp2->isUP){
@@ -389,9 +388,9 @@ int main(int argc, char **argv)
                             }
                         }        
                     }else{ // upstream port
-                        printf("Failed on upstream port\n");
+                        log_message("Failed on upstream port\n");
                         if(!is_unreachable_and_reachable_empty(vop_head)){
-                            printf("All upstream ports are not clean, sending blocked VID from downstream ports\n");
+                            log_message("All upstream ports are not clean, sending blocked VID from downstream ports\n");
                             if((numOfVID = get_unreachable_VIDs_from_offered_ports(vop_head, temp_2d_array))){
                                 for(vop_temp = vop_head;vop_temp;vop_temp = vop_temp->next){ // send black 
                                     if(vop_temp->cp->isUP){
@@ -400,7 +399,7 @@ int main(int argc, char **argv)
                                 }
                             }
                         }else{
-                            printf("Some upstream ports are clean, DONE\n");
+                            log_message("Some upstream ports are clean, DONE\n");
                         }    
                     }
                 }
@@ -408,7 +407,7 @@ int main(int argc, char **argv)
                 // port come back
                 else if(alive && cp_temp->fail_type == DETECT_FAIL)
                 { 
-                    printf("\nPort %s is back at time %lld\n",cp_temp->port_name,get_milli_sec(&current_time));
+                    log_message("\nPort %s is back at time %lld\n",cp_temp->port_name,get_milli_sec(&current_time));
                     cp_temp->fail_type = 0;
                 }
 
@@ -417,17 +416,17 @@ int main(int argc, char **argv)
                 long long received_time_diff = get_milli_sec(&current_time) - cp_temp->last_received_time;
 
                 if(received_time_diff >= DEAD_TIMER && cp_temp->isUP){ // check whether exceed dead timer
-                    printf("Last receive time is %lld\n",cp_temp->last_received_time);
-                    printf("--------Disabled for port %s due to a missing KEEP ALIVE at time %lld--------\n",cp_temp->port_name,get_milli_sec(&current_time));
+                    log_message("Last receive time is %lld\n",cp_temp->last_received_time);
+                    log_message("--------Disabled for port %s due to a missing KEEP ALIVE at time %lld--------\n",cp_temp->port_name,get_milli_sec(&current_time));
                     cp_temp->continue_count = 0; // reset continue count
                     cp_temp->isUP = 0;
                     cp_temp->fail_type = MISS_FAIL;
 
-                    printf("Stop sending and receiving message due to missing hello\n");
+                    log_message("Stop sending and receiving message due to missing hello\n");
 
-                    printf("Sending FAILURE UPDATE message from other working ports\n");
+                    log_message("Sending FAILURE UPDATE message from other working ports\n");
                     if(!mtpConfig.isTopSpine && is_all_offered_ports_down(vop_head)){
-                        printf("All upstream ports down, sending all accepted VIDs from downstream ports\n");
+                        log_message("All upstream ports down, sending all accepted VIDs from downstream ports\n");
                         numOfVID = get_all_accepted_VIDs(vap_head, temp_2d_array);
                         for(vap_temp = vap_head;vap_temp;vap_temp = vap_temp->next){
                             if(vap_temp->cp->isUP){
@@ -435,7 +434,7 @@ int main(int argc, char **argv)
                             }
                         }
                     }else if(find_accepted_port_by_name(vap_head,cp_temp->port_name)){
-                        printf("Failed on downstream port\n");
+                        log_message("Failed on downstream port\n");
                         numOfVID = get_accepted_VIDs_by_port_name(vap_head, cp_temp->port_name, temp_2d_array);
                         for(struct control_port* cp_temp2 = cp_head;cp_temp2;cp_temp2 = cp_temp2->next){
                             if(cp_temp2->isUP){
@@ -443,11 +442,11 @@ int main(int argc, char **argv)
                             }
                         }        
                     }else{ // upstream port
-                        printf("Failed on upstream ports\n");
+                        log_message("Failed on upstream ports\n");
                         if(!is_unreachable_and_reachable_empty(vop_head)){
-                            printf("All upstream ports are not clean, sending blocked VID from downstream ports\n");
+                            log_message("All upstream ports are not clean, sending blocked VID from downstream ports\n");
                             if((numOfVID = get_unreachable_VIDs_from_offered_ports(vop_head, temp_2d_array))){
-                                printf("Sending %d BLACK VID\n",numOfVID);
+                                log_message("Sending %d BLACK VID\n",numOfVID);
                                 for(vop_temp = vop_head;vop_temp;vop_temp = vop_temp->next){ // send black 
                                     if(vop_temp->cp->isUP){
                                         send_failure_update(vop_temp->port_name, temp_2d_array, numOfVID, UNREACHABLE_OPTION);
@@ -455,7 +454,7 @@ int main(int argc, char **argv)
                                 }
                             }
                         }else{
-                            printf("Some upstream ports are clean, DONE\n"); 
+                            log_message("Some upstream ports are clean, DONE\n"); 
                         }   
                     }
                     continue;
@@ -465,9 +464,9 @@ int main(int argc, char **argv)
             long long current_timestamp = get_milli_sec(&current_time);
             // send hello keep live
             if(current_timestamp - cp_temp->last_sent_time >= HELLO_TIMER){ // send keep alive message if condition met
-                // printf("Send before time %lld\n",current_timestamp);
+                // log_message("Send before time %lld\n",current_timestamp);
                 if(send_keep_alive(cp_temp->port_name) != -1){ // send here
-                    // printf("Sent KEEP ALIVE at time = %lld, update last sent time for port %s \n",get_milli_sec(&current_time),cp_temp->port_name);
+                    // log_message("Sent KEEP ALIVE at time = %lld, update last sent time for port %s \n",get_milli_sec(&current_time),cp_temp->port_name);
                     cp_temp->last_sent_time = get_milli_sec(&current_time); // update send time
                 }
             }
@@ -480,8 +479,11 @@ void handleSignal(int sig)
 {
     long long current_timestamp = get_milli_sec(&current_time);
 
-    printf("\nMTP STOPPED [%lld]\n",current_timestamp);
+    log_message("\nMTP STOPPED [%lld]\n",current_timestamp);
     // To-Do: Add memory-freeing calls here (control and compute interfaces, temp arrays, etc.)
+
+    // If file logging is currently enabled, close the file
+    close_log_file();
 
     FILE* fptr;
     fptr = fopen("node_down.log", "w");
@@ -489,7 +491,7 @@ void handleSignal(int sig)
     // checking if the file is opened successfully
     if (fptr == NULL) 
     {
-        printf("Stop time could not be written to log.\n");
+        log_message("Stop time could not be written to log.\n");
         exit(0);
     }
 
@@ -503,11 +505,11 @@ void handleSignal(int sig)
 
 void handle_receive_hello_NR(unsigned char* recvBuffer_MTP, char* recvOnEtherPort){
     if(get_tier_from_hello_message(recvBuffer_MTP + 15) >= mtpConfig.tier){ // break the case if the message from higher tier
-        // printf("\nReceived HelloNR from higher tier, ignored!\n");
+        // log_message("\nReceived HelloNR from higher tier, ignored!\n");
         return;
     }
 
-    printf("\n Hello no response Received\n");
+    log_message("\n Hello no response Received\n");
 
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 15,0);
     
@@ -516,7 +518,7 @@ void handle_receive_hello_NR(unsigned char* recvBuffer_MTP, char* recvOnEtherPor
 
 void handle_receive_join_req(unsigned char* recvBuffer_MTP,char* recvOnEtherPort)
 {
-    printf("\n Join Request Received\n");
+    log_message("\n Join Request Received\n");
 
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 15,0);
 
@@ -530,7 +532,7 @@ void handle_receive_join_req(unsigned char* recvBuffer_MTP,char* recvOnEtherPort
 }
 
 void handle_receive_join_res(unsigned char* recvBuffer_MTP,char* recvOnEtherPort){
-    printf("\n Join Response Received\n");
+    log_message("\n Join Response Received\n");
     
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 15,0);
 
@@ -558,7 +560,7 @@ void handle_receive_join_res(unsigned char* recvBuffer_MTP,char* recvOnEtherPort
 
 
 void handle_receive_join_ack(unsigned char* recvBuffer_MTP,char* recvOnEtherPort){
-    printf("\n Join Accept Received\n");       
+    log_message("\n Join Accept Received\n");       
 
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 15,0);
 
@@ -591,7 +593,7 @@ void handle_receive_start_hello(char* recvOnEtherPort){
 
 void handle_receive_data_msg(unsigned char* recvBuffer_MTP,char* recvOnEtherPort, socklen_t recv_len_MTP)
 {
-    printf("\nData message Received\n");
+    log_message("\nData message Received\n");
 
     // Find the control port that received the MTP data message and when it last received an MTP message / keep-alive.
     cp_temp = find_control_port_by_name(cp_head, recvOnEtherPort);
@@ -627,20 +629,20 @@ void handle_receive_data_msg(unsigned char* recvBuffer_MTP,char* recvOnEtherPort
 
         int_to_str(dest_VID_str, dest_VID);
 
-        printf("Src VID = %d\n",src_VID);
-        printf("Dest VID = %d\n",dest_VID);
+        log_message("Src VID = %d\n",src_VID);
+        log_message("Dest VID = %d\n",dest_VID);
         
         
         // check accepted ports first
         if((vap_temp = find_accepted_port_by_VID(vap_head,dest_VID_str))){ // if dest VID exist in accepted port table
-            printf("Found VID in VID_Accepted_Table \n");
+            log_message("Found VID in VID_Accepted_Table \n");
 
             if(!vap_temp->cp->isUP || find_unreachable_VID_by_name(vap_temp->ut, vap_temp->port_name)){
-                printf("But this port is down or unreachable for VID %s, dumped packet\n",dest_VID_str);
+                log_message("But this port is down or unreachable for VID %s, dumped packet\n",dest_VID_str);
                 return;
             }
             find_control_port_by_name(cp_head,vap_temp->port_name)->last_sent_time = get_milli_sec(&current_time);
-            // printf("Sent data message at time = %lld, update port sent time\n",t);
+            // log_message("Sent data message at time = %lld, update port sent time\n",t);
 
             route_data_from_spine(vap_temp->port_name,recvBuffer_MTP + 14,recv_len_MTP - 14);
         }else{ // else push up, pick one from offered port table
@@ -663,17 +665,17 @@ void handle_receive_data_msg(unsigned char* recvBuffer_MTP,char* recvOnEtherPort
             
             size_t available_offered_port_num = count_available_offered_port(vop_head,temp_2d_array,dest_VID_str);
             if(!available_offered_port_num){
-                printf("Found 0 available port, packet dumped\n");
+                log_message("Found 0 available port, packet dumped\n");
                 return;
             }
 
             uint32_t hash_code = jenkins_one_at_a_time_hash(hash_str,4);
-            printf("VID can't be found in accepted port table, push up to next spine\n");
-            printf("available_offered_port_num = %lu\n",available_offered_port_num);
-            printf("Hash ascii value array = {%d,%d,%d,%d}, hash_code = %u\n", hash_str[0], hash_str[1], hash_str[2], hash_str[3],hash_code);
-            printf("Mod pos index = %lu\n",hash_code % available_offered_port_num);
+            log_message("VID can't be found in accepted port table, push up to next spine\n");
+            log_message("available_offered_port_num = %lu\n",available_offered_port_num);
+            log_message("Hash ascii value array = {%d,%d,%d,%d}, hash_code = %u\n", hash_str[0], hash_str[1], hash_str[2], hash_str[3],hash_code);
+            log_message("Mod pos index = %lu\n",hash_code % available_offered_port_num);
             find_control_port_by_name(cp_head,temp_2d_array[hash_code % available_offered_port_num])->last_sent_time = get_milli_sec(&current_time);
-            // printf("Sent data message at time = %lld, update port sent time\n",t);
+            // log_message("Sent data message at time = %lld, update port sent time\n",t);
             route_data_from_spine(temp_2d_array[hash_code % available_offered_port_num],recvBuffer_MTP + 14,recv_len_MTP - 14);
         }
     }
@@ -688,16 +690,16 @@ void handle_receive_keep_alive(char* recvOnEtherPort){
 
         long long current_timestamp = get_milli_sec(&current_time); // get current time stamp
 
-        // printf("Received keep alive at time %lld, update port %s\n",current_timestamp,cp_temp->port_name);
+        // log_message("Received keep alive at time %lld, update port %s\n",current_timestamp,cp_temp->port_name);
         
         // recover code
         if(!cp_temp->isUP && current_timestamp - cp_temp->last_received_time < DEAD_TIMER && cp_temp->continue_count < 3){
             cp_temp->continue_count++;
-            printf("Received from port %s at time %lld\n",recvOnEtherPort,current_timestamp);
-            printf("%s -> count =  %d\n",cp_temp->port_name,cp_temp->continue_count);
+            log_message("Received from port %s at time %lld\n",recvOnEtherPort,current_timestamp);
+            log_message("%s -> count =  %d\n",cp_temp->port_name,cp_temp->continue_count);
             if(cp_temp->continue_count == 3){ // received three consecutive on time keep alive, turn on this port again
                 uint16_t numOfVID = 0;
-                printf("--------Turn on for port %s after received 3 KEEP ALIVE message --------\n",cp_temp->port_name);
+                log_message("--------Turn on for port %s after received 3 KEEP ALIVE message --------\n",cp_temp->port_name);
                 
                 //recover code here
                 if((vap_temp = find_accepted_port_by_name(vap_head,cp_temp->port_name))){ // downstream port recovered
@@ -715,7 +717,7 @@ void handle_receive_keep_alive(char* recvOnEtherPort){
                         for(struct control_port* cp_temp2 = cp_head;cp_temp2;cp_temp2 = cp_temp2->next){
                             if(cp_temp2->isUP){ 
                                 // send
-                                printf("Sent recover at time %lld\n",get_milli_sec(&current_time));
+                                log_message("Sent recover at time %lld\n",get_milli_sec(&current_time));
                                 send_recover_update(cp_temp2->port_name,temp_2d_array,numOfVID,UNREACHABLE_OPTION);
                             }else{ // store 
                                 // prn_head = add_to_port_recover_notification_table(prn_head, cp_temp2->port_name, copy_VID_table(vap_temp->VID_head), UNREACHABLE_OPTION);
@@ -745,22 +747,22 @@ void handle_receive_keep_alive(char* recvOnEtherPort){
 }
 
 void handle_receive_failure_update(unsigned char* recvBuffer_MTP,char* recvOnEtherPort,  socklen_t recv_len_MTP){
-    printf("\n FAILURE UPDATE message received at %lld, on port %s \n",get_milli_sec(&current_time), recvOnEtherPort);
-    printf("Message size = %d\n",recv_len_MTP);
+    log_message("\n FAILURE UPDATE message received at %lld, on port %s \n",get_milli_sec(&current_time), recvOnEtherPort);
+    log_message("Message size = %d\n",recv_len_MTP);
 
     uint8_t table_option = recvBuffer_MTP[15];
-    printf("Extract option = %d\n",table_option);
+    log_message("Extract option = %d\n",table_option);
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 16,1);
 
     if((vap_temp = find_accepted_port_by_name(vap_head,recvOnEtherPort))){
-        printf("Received from downstream\n");
+        log_message("Received from downstream\n");
         for(uint16_t k = 0;k < numOfVID;k++){
-            printf("Adding VID = %s to unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
+            log_message("Adding VID = %s to unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
             vap_temp->ut = add_to_unreachable_table(vap_temp->ut,temp_2d_array[k]);
         }
         print_unreachable_table(vap_temp->ut);
 
-        printf("Transfer this message from other working ports\n");
+        log_message("Transfer this message from other working ports\n");
 
         for(cp_temp = cp_head;cp_temp;cp_temp = cp_temp->next){
             if(strcmp(cp_temp->port_name, recvOnEtherPort) && cp_temp->isUP){
@@ -768,33 +770,33 @@ void handle_receive_failure_update(unsigned char* recvBuffer_MTP,char* recvOnEth
             }
         }
     }else if((vop_temp = find_offered_port_by_name(vop_head,recvOnEtherPort))){
-        printf("Received from upstream\n");
+        log_message("Received from upstream\n");
         if(table_option == UNREACHABLE_OPTION){
-            printf("Updated unreachable table for port %s\n",recvOnEtherPort);
+            log_message("Updated unreachable table for port %s\n",recvOnEtherPort);
             vop_temp->rt->VID_head = clear_VID_table(vop_temp->rt->VID_head); // clear reachable table 
             for(uint16_t k = 0;k < numOfVID;k++){
-                printf("Adding VID %s to unreachable table\n",temp_2d_array[k]);
+                log_message("Adding VID %s to unreachable table\n",temp_2d_array[k]);
                 vop_temp->ut = add_to_unreachable_table(vop_temp->ut,temp_2d_array[k]);
             }
         }else{
-            printf("Updated reachable table for port %s\n",recvOnEtherPort);
+            log_message("Updated reachable table for port %s\n",recvOnEtherPort);
             // vop_temp->ut->VID_head = clear_VID_table(vop_temp->ut->VID_head); // clear unreachable table
             vop_temp->rt->VID_head = clear_VID_table(vop_temp->rt->VID_head); // clear reachable table
             for(uint16_t k = 0;k < numOfVID;k++){
-                printf("Adding VID %s to reachable table\n",temp_2d_array[k]);
+                log_message("Adding VID %s to reachable table\n",temp_2d_array[k]);
                 vop_temp->rt = add_to_reachable_table(vop_temp->rt,temp_2d_array[k]);
             }
             
         }
 
         if(mtpConfig.isLeaf){
-            printf("I am a tor, do nothing\n");
-            printf("Finished processing failure message at time = %lld\n",get_milli_sec(&current_time));
+            log_message("I am a tor, do nothing\n");
+            log_message("Finished processing failure message at time = %lld\n",get_milli_sec(&current_time));
             return;
         }
 
         if(!is_unreachable_and_reachable_empty(vop_head)){
-            printf("All offered ports are not clean, keep sending\n");
+            log_message("All offered ports are not clean, keep sending\n");
             if((numOfVID = get_unreachable_VIDs_from_offered_ports(vop_head, temp_2d_array))){
                 for(vap_temp = vap_head;vap_temp;vap_temp = vap_temp->next){ // send black first
                     if(vap_temp->cp->isUP){
@@ -803,42 +805,42 @@ void handle_receive_failure_update(unsigned char* recvBuffer_MTP,char* recvOnEth
                 }
             }
         }else{
-            printf("Some upstream ports are clean, DONE\n");
+            log_message("Some upstream ports are clean, DONE\n");
         }
     }
-    printf("Finished processing failure message at time = %lld\n",get_milli_sec(&current_time));
+    log_message("Finished processing failure message at time = %lld\n",get_milli_sec(&current_time));
 }
 
 void handle_receive_recover_update(unsigned char* recvBuffer_MTP,char* recvOnEtherPort){
-    printf("\n RECOVER UPDATE message received at %lld, on port %s \n",get_milli_sec(&current_time), recvOnEtherPort);
+    log_message("\n RECOVER UPDATE message received at %lld, on port %s \n",get_milli_sec(&current_time), recvOnEtherPort);
     uint8_t table_option = recvBuffer_MTP[15];
-    printf("Extract option = %d\n",table_option);
+    log_message("Extract option = %d\n",table_option);
     uint16_t numOfVID = extract_VID_from_receive_buff(temp_2d_array,recvBuffer_MTP + 16,1);
 
     if((vap_temp = find_accepted_port_by_name(vap_head,recvOnEtherPort))){
-        printf("Received from downstream\n");
+        log_message("Received from downstream\n");
         for(uint16_t k = 0;k < numOfVID;k++){
-            printf("Removing VID = %s unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
+            log_message("Removing VID = %s unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
             vap_temp->ut = remove_unreachable_VID_by_name(vap_temp->ut,temp_2d_array[k]);
         }
 
         print_unreachable_table(vap_temp->ut);
 
-        printf("Transfer this message from other working ports\n");
+        log_message("Transfer this message from other working ports\n");
 
         for(cp_temp = cp_head;cp_temp;cp_temp = cp_temp->next){
             if(strcmp(cp_temp->port_name, recvOnEtherPort) && cp_temp->isUP){
                 send_recover_update(cp_temp->port_name,temp_2d_array, numOfVID, UNREACHABLE_OPTION);
-                printf("Sent out from port %s\n",cp_temp->port_name);
+                log_message("Sent out from port %s\n",cp_temp->port_name);
             }
         }
     }else if((vop_temp = find_offered_port_by_name(vop_head,recvOnEtherPort))){
-        printf("Received from upstream\n");
+        log_message("Received from upstream\n");
         
         if(table_option == UNREACHABLE_OPTION){
             int is_clean_before = is_unreachable_and_reachable_empty(vop_head);
             for(uint16_t k = 0;k < numOfVID;k++){
-                printf("Removing VID = %s from unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
+                log_message("Removing VID = %s from unreachable table for port %s\n",temp_2d_array[k],recvOnEtherPort);
                 vop_temp->ut = remove_unreachable_VID_by_name(vop_temp->ut,temp_2d_array[k]);
             }
             int is_clean_after = is_unreachable_and_reachable_empty(vop_head);
@@ -863,7 +865,7 @@ void handle_receive_recover_update(unsigned char* recvBuffer_MTP,char* recvOnEth
             }
 
         }else{
-            printf("Clear reachable table for port %s\n",recvOnEtherPort);
+            log_message("Clear reachable table for port %s\n",recvOnEtherPort);
             int is_clean_before = is_unreachable_and_reachable_empty(vop_head);
             vop_temp->rt->VID_head = clear_VID_table(vop_temp->rt->VID_head); // clear reachable table   
             
@@ -885,11 +887,11 @@ void handle_receive_recover_update(unsigned char* recvBuffer_MTP,char* recvOnEth
 }
 
 void handle_receive_from_server(unsigned char* recvBuffer_IP,char* recvOnEtherPort, socklen_t recv_len_IP){
-    printf("\n Received an IP message on port %s from server\n",  recvOnEtherPort); 
+    log_message("\n Received an IP message on port %s from server\n",  recvOnEtherPort); 
     unsigned char *ip_header_with_payload = recvBuffer_IP + 14;
 
-    printf("Src IP = %d.%d.%d.%d\n",ip_header_with_payload[12],ip_header_with_payload[13],ip_header_with_payload[14],ip_header_with_payload[15]);
-    printf("Dest IP = %d.%d.%d.%d\n",ip_header_with_payload[16],ip_header_with_payload[17],ip_header_with_payload[18],ip_header_with_payload[19]);
+    log_message("Src IP = %d.%d.%d.%d\n",ip_header_with_payload[12],ip_header_with_payload[13],ip_header_with_payload[14],ip_header_with_payload[15]);
+    log_message("Dest IP = %d.%d.%d.%d\n",ip_header_with_payload[16],ip_header_with_payload[17],ip_header_with_payload[18],ip_header_with_payload[19]);
 
     uint16_t src_VID = ip_header_with_payload[12 + VID_octet - 1];
     uint16_t dest_VID = ip_header_with_payload[16 + VID_octet - 1];
@@ -901,8 +903,8 @@ void handle_receive_from_server(unsigned char* recvBuffer_IP,char* recvOnEtherPo
     char dest_VID_str[VID_LEN];
     int_to_str(dest_VID_str, dest_VID);
 
-    printf("Src VID = %d\n",src_VID);
-    printf("Dest VID = %d\n",dest_VID);
+    log_message("Src VID = %d\n",src_VID);
+    log_message("Dest VID = %d\n",dest_VID);
 
     // hash implementation
     char hash_str[32]; 
@@ -914,11 +916,11 @@ void handle_receive_from_server(unsigned char* recvBuffer_IP,char* recvOnEtherPo
     uint32_t hash_code = jenkins_one_at_a_time_hash(hash_str,4); // hash src VID and dest VID
     size_t available_offered_port_num = count_available_offered_port(vop_head,temp_2d_array,dest_VID_str);
     if(!available_offered_port_num){
-        printf("Found 0 available port, packet dumped\n");
+        log_message("Found 0 available port, packet dumped\n");
     }else{
-        printf("available_port_num = %lu\n",available_offered_port_num);
-        printf("Hash ascii value array = {%d,%d,%d,%d}, hash_code = %u\n", hash_str[0], hash_str[1], hash_str[2], hash_str[3],hash_code);
-        printf("Mod pos index = %lu\n",hash_code % available_offered_port_num);
+        log_message("available_port_num = %lu\n",available_offered_port_num);
+        log_message("Hash ascii value array = {%d,%d,%d,%d}, hash_code = %u\n", hash_str[0], hash_str[1], hash_str[2], hash_str[3],hash_code);
+        log_message("Mod pos index = %lu\n",hash_code % available_offered_port_num);
         // pick one port, then send the message out
 
         find_control_port_by_name(cp_head,temp_2d_array[hash_code % available_offered_port_num])->last_sent_time = get_milli_sec(&current_time);

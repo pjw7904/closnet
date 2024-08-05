@@ -4,6 +4,7 @@
 #include "config.h"
 #include "mtp_utils.h"
 #include "mtp_struct.h"
+#include "logger.h"
 
 int isValidDirectory(const char *path) 
 {
@@ -31,21 +32,21 @@ int isValidDirectory(const char *path)
     return 0;  // It's not a valid directory
 }
 
-char* getConfigFilePath(const char* directory, const char* name) 
+char* getFilePath(const char* directory, const char* name, const char* extension) 
 {
     // Allocate memory for the full path
-    char* configFilePath = malloc(MAX_FILE_PATH_LENGTH);
+    char* filePath = malloc(MAX_FILE_PATH_LENGTH);
 
-    if (configFilePath == NULL) 
+    if (filePath == NULL) 
     {
         fprintf(stderr, "Memory allocation failed\n");
         exit(EXIT_FAILURE);
     }
 
     // Create the full path in the format: <directory>/<name>.conf
-    snprintf(configFilePath, MAX_FILE_PATH_LENGTH, "%s/%s.conf", directory, name);
+    snprintf(filePath, MAX_FILE_PATH_LENGTH, "%s/%s.%s", directory, name, extension);
 
-    return configFilePath;
+    return filePath;
 }
 
 void readConfigurationFile(Config *config, const char* configFile) 
@@ -111,7 +112,7 @@ compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSub
     if(!isLeaf)
     {
         strcpy(computeSubnetIntfName, "None");
-        printf("\nNode is a spine, no compute interface.\n");
+        log_message("\nNode is a spine, no compute interface.\n");
         return NULL;
     }
 
@@ -132,7 +133,7 @@ compute_interface* setComputeInterfaces(struct ifaddrs *ifaddr, char *computeSub
             compute_intf_head = addComputeInteface(compute_intf_head, ifa->ifa_name);
 
             strcpy(computeSubnetIntfName, ifa->ifa_name);
-            printf("\nInterface %s is set as the compute port.\n", ifa->ifa_name);
+            log_message("\nInterface %s is set as the compute port.\n", ifa->ifa_name);
         }
     }
     
@@ -169,7 +170,7 @@ struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeS
             }
 
             cp_head = add_to_control_port_table(cp_head, ifa->ifa_name);
-            printf("\nAdded interface %s as a control port.\n", ifa->ifa_name);
+            log_message("\nAdded interface %s as a control port.\n", ifa->ifa_name);
         } 
     }
 

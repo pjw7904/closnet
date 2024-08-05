@@ -18,7 +18,7 @@ int dataSend(char* port_name, int payloadLen, unsigned char *inPayload)
 	int frame_size = HEADER_SIZE + payloadLen;
 
 	// Copying payLoad to frame
-	//printf("\n\n BEFORE copying payload in ctrlSend\n");
+	//log_message("\n\n BEFORE copying payload in ctrlSend\n");
 	memcpy(t->frame + HEADER_SIZE, inPayload, payloadLen);
 
 
@@ -43,7 +43,7 @@ int computeSend(char* port_name, int payloadLen, unsigned char *inPayload)
 	int frame_size = HEADER_SIZE + payloadLen;
 
 	// Copying payLoad to frame
-	//printf("\n\n BEFORE copying payload in ctrlSend\n");
+	//log_message("\n\n BEFORE copying payload in ctrlSend\n");
 	memcpy(computeFrame->frame + HEADER_SIZE, inPayload, payloadLen);
 
 	if(sendto(socketfd, computeFrame->frame, frame_size, MSG_NOSIGNAL, (struct sockaddr*) computeFrame->socket_address, sizeof(struct sockaddr_ll)) < 0) 

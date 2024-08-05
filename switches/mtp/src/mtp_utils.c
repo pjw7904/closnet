@@ -1,7 +1,7 @@
 
 #include "mtp_utils.h"
 #include "mtp_struct.h"
-
+#include "logger.h"
 
 // it is different from previous one, it stores the port data to a 2d array
 uint8_t get_all_ethernet_interface2(char** dest, const char* nodeName)
@@ -65,7 +65,7 @@ void getRootVID(char *dest, char *ethernet_interface_name, uint8_t octet)
                                                         // SIOCGIFADDR - Get, set, or delete the address of the device using ifr_addr, or ifr6_addr with ifr6_prefixlen. 
     close(fd);
     /* display result */
-    //printf("\n IP address of the device: %s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));           // inet_ntoa - function converts the Internet host address in, given in network byte order, to a string in IPv4 dotted-decimal notation
+    //log_message("\n IP address of the device: %s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));           // inet_ntoa - function converts the Internet host address in, given in network byte order, to a string in IPv4 dotted-decimal notation
     char *ipaddr = inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
 
     int i = 0, dot_counter = 0,j = 0;

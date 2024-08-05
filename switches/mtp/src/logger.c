@@ -9,7 +9,7 @@ void set_log_mode(log_mode_t mode, const char *file_path)
 
     if(mode == LOG_TO_FILE) 
     {
-        log_file = fopen(file_path, "a");
+        log_file = fopen(file_path, "w");
 
         if(log_file == NULL) 
         {

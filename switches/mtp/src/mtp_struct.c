@@ -1,5 +1,6 @@
 
 #include "mtp_struct.h"
+#include "logger.h"
 
 // ============================================ function for control_port ============================================ //
 struct control_port* add_to_control_port_table(struct control_port* cp_head, char* new_port_name){
@@ -85,9 +86,9 @@ int is_all_down(struct control_port* cp_head){
 
 void print_control_port_table(struct control_port* cp_head){
     struct control_port* cp_temp = cp_head;
-    printf("--- Printing control port table ---\n");
+    log_message("--- Printing control port table ---\n");
     while(cp_temp){
-        printf("%s\n",cp_temp->port_name);
+        log_message("%s\n",cp_temp->port_name);
         cp_temp = cp_temp->next;
     }
 }
@@ -142,11 +143,11 @@ void printComputeInterfaces(compute_interface *head)
 {
     compute_interface *ci_temp = head;
 
-    printf("--- Compute Interfaces ---\n");
+    log_message("--- Compute Interfaces ---\n");
     
     while(ci_temp)
     {
-        printf("%s\n",ci_temp->port_name);
+        log_message("%s\n",ci_temp->port_name);
         ci_temp = ci_temp->next;
     }
 }
@@ -271,7 +272,7 @@ void copy_VID_prefix(char *dest, char* src){
 void print_VID_table(struct VID* VID_head){
     struct VID* VID_temp = VID_head;
     while(VID_temp){
-        printf("%s\n",VID_temp->VID_name);
+        log_message("%s\n",VID_temp->VID_name);
         VID_temp = VID_temp->next;
     }
 }
@@ -482,9 +483,9 @@ int is_all_offered_ports_down(struct VID_offered_port* vop_head){
 
 void print_offered_table(struct VID_offered_port* vop_head){
     struct VID_offered_port* vop_temp = vop_head;
-    printf("--- Printing VID offered table ---\n");
+    log_message("--- Printing VID offered table ---\n");
     while(vop_temp){
-        printf("Port %s has VIDs => \n",vop_temp->port_name);
+        log_message("Port %s has VIDs => \n",vop_temp->port_name);
         print_VID_table(vop_temp->VID_head);
         vop_temp = vop_temp->next;
     }
@@ -588,9 +589,9 @@ size_t get_all_accepted_VIDs(struct VID_accepted_port* vap_head, char **store_ar
 
 void print_accepted_table(struct VID_accepted_port* vap_head){
     struct VID_accepted_port* vap_temp = vap_head;
-    printf("--- Printing VID accepted table ---\n");
+    log_message("--- Printing VID accepted table ---\n");
     while(vap_temp){
-        printf("Port %s has VIDs =>\n",vap_temp->port_name);
+        log_message("Port %s has VIDs =>\n",vap_temp->port_name);
         print_VID_table(vap_temp->VID_head);
         vap_temp = vap_temp->next;
     }
@@ -657,9 +658,9 @@ struct notification* remove_notification_by_from_port_name(struct notification* 
 void print_notification_table(struct notification* ntf_head){
     struct notification* ntf_temp = ntf_head;
     while(ntf_temp){
-        printf("from port name: %s\n",ntf_temp->from_port_name);
-        printf("table option: %d\n",ntf_temp->table_option);
-        printf("operation option: %d\n",ntf_temp->operation_option);
+        log_message("from port name: %s\n",ntf_temp->from_port_name);
+        log_message("table option: %d\n",ntf_temp->table_option);
+        log_message("operation option: %d\n",ntf_temp->operation_option);
         ntf_temp = ntf_temp->next;
     }
 }
