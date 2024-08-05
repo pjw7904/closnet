@@ -4,6 +4,7 @@
 ### MTP-Mininet ###
 switches/*/bin/*
 topologies/*
+logs/*
 
 ### C ###
 # Prerequisites
