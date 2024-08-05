@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+/*
+ * Custom MTP imports.
+ */
+// None
+
 /*****************************************
  * CONSTANTS 
  *****************************************/
@@ -16,12 +21,15 @@
 /*****************************************
  * STRUCTURES 
  *****************************************/
-// None
+typedef enum {
+    LOG_TO_CONSOLE,
+    LOG_TO_FILE
+} log_mode_t;
 
 /*****************************************
  * FUNCTION PROTOTYPES 
  *****************************************/
-void open_log_file(const char *file_path);
+void set_log_mode(log_mode_t mode, const char *file_path);
 void close_log_file();
 void log_message(const char *format, ...);
 
