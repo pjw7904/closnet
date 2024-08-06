@@ -24,7 +24,8 @@ class ClosConfigTopo(Topo):
             node1Address, node2Address = self.getIPv4Addressing(node1, node2)
 
             # Add the link between the nodes to the topology
-            self.addLink(node1, node2, params1=node1Address, params2=node2Address)
+            self.addLink(node1, node2, 
+                         params1=node1Address, params2=node2Address)
 
         return
 
@@ -36,9 +37,11 @@ class ClosConfigTopo(Topo):
 
             elif(self.clos.nodes[node]['tier'] == self.COMPUTE_TIER):
                 hostIPDict = self.clos.nodes[node].get('ipv4')
+                defaultGateway = list(hostIPDict.keys())[0]
                 hostIP = list(hostIPDict.values())[0]
                     
-                mininetNode = self.addHost(node, ip=f"{hostIP}/24")
+                mininetNode = self.addHost(node, 
+                                           ip=f"{hostIP}/24", defaultRoute=f"via {self.clos.nodes[defaultGateway]['ipv4'][node]}")
 
             else:
                 raise Exception(f"{node} does not have a normal tier value, not adding.")
