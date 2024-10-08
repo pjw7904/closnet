@@ -546,21 +546,22 @@ struct VID_accepted_port* find_accepted_port_by_name(struct VID_accepted_port* v
     return NULL;
 }
 
-struct VID_accepted_port* find_accepted_port_by_VID(struct VID_accepted_port* vap_head, char *VID_name){
-
-    size_t dest_VID_len = strlen(VID_name);
-
+struct VID_accepted_port* find_accepted_port_by_VID(struct VID_accepted_port* vap_head, char *VID_name)
+{
     struct VID_accepted_port* vap_temp = vap_head;
-    while(vap_temp){ // iterate VID_Accepted_Table
+    while(vap_temp) // iterate VID_Accepted_Table
+    {
         struct VID* VID_temp = vap_temp->VID_head;
-        while(VID_temp){ // iterate VID table
-            int i = 0;
-            while( 1 ){
-                if(VID_temp->VID_name[i] != VID_name[i]) break;
-                else i++;
-                if(i == dest_VID_len && VID_temp->VID_name[i] == '.') return vap_temp;
-                if(i == dest_VID_len || VID_temp->VID_name[i] == '.') break;
+
+        while(VID_temp) // iterate VID table
+        {
+
+            if (strncmp(VID_temp->VID_name, VID_name, strlen(VID_name)) == 0 &&
+                VID_temp->VID_name[strlen(VID_name)] == '.')
+            {
+                return vap_temp;
             }
+
             VID_temp = VID_temp->next;
         }
         
@@ -569,6 +570,7 @@ struct VID_accepted_port* find_accepted_port_by_VID(struct VID_accepted_port* va
 
     return NULL; // return NULL if VID doesn't exist
 }
+
 
 
 size_t get_accepted_VIDs_by_port_name(struct VID_accepted_port* vap_head, char* port_name, char **store_array){
