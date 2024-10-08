@@ -143,21 +143,34 @@ uint32_t jenkins_one_at_a_time_hash(uint8_t *key, size_t len){
 }
 
 // convert integer to string (char[])
-size_t int_to_str(char *dest_storage, unsigned int number){
+size_t int_to_str(char *dest_storage, unsigned int number)
+{
+    if (number == 0)
+    {
+        dest_storage[0] = '0';
+        dest_storage[1] = '\0';
+        return 1; // "0" is one character long
+    }
+
     size_t num_len = 0;
-    while(number){
+    while(number)
+    {
         dest_storage[num_len++] = number % 10 + '0';
         number /= 10;
     }
 
-    for(int i = 0;i < num_len / 2;i++){
-        char t = dest_storage[0];
-        dest_storage[0] = dest_storage[num_len - i - 1];
+    // Reverse the string
+    for(size_t i = 0; i < num_len / 2; i++)
+    {
+        char t = dest_storage[i];
+        dest_storage[i] = dest_storage[num_len - i - 1];
         dest_storage[num_len - i - 1] = t;
     }
+
     dest_storage[num_len] = '\0';
     return num_len; // return the length of this number in string format
 }
+
 
 // get current time in millisecond
 long long get_milli_sec(struct timeval* current_time){
