@@ -1,5 +1,12 @@
-from mako.template import Template
+# Core libraries
 import os
+
+# External libraries
+from mako.template import Template
+
+# Constants
+COMPUTE_TIER = 0 # No control protocol configuration for the compute nodes.
+CONFIG_DIR = "/tmp" # Place all node config files in the tmp directory.
 
 def generateConfigMTP(topology):
     '''
@@ -10,8 +17,6 @@ def generateConfigMTP(topology):
 
     TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
                                      "switches/mtp/config_template/mtp_conf.mako")
-    CONFIG_DIR = "/tmp"
-    COMPUTE_TIER = 0 # We do not want config files for the compute nodes.
 
     # Open the MTP configuration template
     try: 
@@ -35,5 +40,45 @@ def generateConfigMTP(topology):
             # Save the configuration in the file <node_name>.conf
             with open(os.path.join(CONFIG_DIR, f"{node}.conf"), 'w') as configFile:
                 configFile.write(mtpConfig)
+
+    return
+
+
+def generateConfigBGP(topology):
+    '''
+    Create and save configuration files for BGP nodes.
+
+    :param topology: The NetworkX-formatted topology.
+    '''
+
+    TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
+                                     "switches/bgp/config_template/bgp_conf.mako")
+    
+    # Store information about BGP-speaking neighbors to configure neighborship
+    neighboringNodes = []
+
+    # Open the BGP configuration template
+    try: 
+        bgpTemplate = Template(filename=TEMPLATE_LOCATION)
+    except Exception as e:
+        print(f"Exception: {e}")
+
+    # Iterate through the nodes in the topology
+    for node in topology:
+        # Find the node's BGP-speaking neighbors and determine their ASN as well as their IPv4 address used on the subnet shared by the nodes.
+        for neighbor, _ in topology.getNodeAttribute(node, 'ipv4').items():
+            if(topology.isNetworkNode(neighbor)):
+                neighboringNodes.append({'asn':topology.getNodeAttribute(neighbor, 'ASN'), 
+                                         'ip':topology.getNodeAttribute(neighbor, 'ipv4', node)})
+
+        # In addition to storing neighbor information, store any compute subnets that the node must advertise to neighbors (leaf's only).
+        nodeTemplate = {'neighbors':neighboringNodes, 'bgp_asn': topology.getNodeAttribute(node, 'ASN'), 'networks': topology.getNodeAttribute(node, 'advertise')}
+
+        # Process the data and render a custom BGP configuration.
+        bgpConfig = bgpTemplate.render(**nodeTemplate)
+
+        # Save the configuration in the file <node_name>.conf
+        with open(os.path.join(CONFIG_DIR, f"{node}.conf"), 'w') as configFile:
+            configFile.write(bgpConfig)
 
     return
