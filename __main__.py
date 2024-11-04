@@ -13,7 +13,7 @@ from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
 # Custom libraries
-from generators.ClosGenerator import ClosGenerator, MTPConfig
+from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
 from generators.ClosConfigTopo import ClosConfigTopo
 from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
 from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
@@ -23,6 +23,8 @@ from ConfigGenerator import *
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
 GRAPHML_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/graphml")
+MTP = "mtp"
+BGP = "bgp"
 
 
 def loadTopologyConfig(topologyName: str) -> nx.graph:
@@ -63,6 +65,24 @@ def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> nx.graph:
     return nx.node_link_graph(json.load(topologyConfig))
 
 
+def generateTopology(closConfigGenerator, nodeConfigGenerator, config, topologyName, portDensityModifications):
+    # Define the Clos topology parameters
+    topology = closConfigGenerator(config.ports,
+                                   config.tiers,
+                                   southboundPortsConfig=portDensityModifications)
+
+    # Build the Clos topology
+    topology.buildGraph()
+
+    # Save the topology configuration
+    topology = saveTopologyConfig(topologyName, topology)
+
+    # Define configuration for switches
+    nodeConfigGenerator(topology)
+
+    return topology
+
+
 def main():
     '''
     Entry into the program. Design a folded-Clos topology and pick a protocol to install on it.
@@ -87,39 +107,52 @@ def main():
     else:
         portDensityModifications = None
 
-    # Generate the name associated with this particular topology
+    # Generate the name associated with this particular topology.
     topologyName = generateTestName(config)
     print(f"Topology name = {topologyName}")
 
-    # Determine if this topology already has a configuration
+    # Determine if this topology already has a configuration.
     topology = loadTopologyConfig(topologyName)
 
-    # Build the topology configuration based on the protocol chosen if the config is new.
+    # If this topology does not already have pre-computed configuration, build it.
     if(not topology):
-        topology = MTPConfig(config.ports, config.tiers, southboundPortsConfig=portDensityModifications)
-        topology.buildGraph()
-        topology = saveTopologyConfig(topologyName, topology) # Save the topology configuration
+        if(config.protocol == MTP):
+            topology = generateTopology(MTPConfig,
+                                        generateConfigMTP,
+                                        config, topologyName, portDensityModifications)
+
+        elif(config.protocol == BGP):
+            topology = generateTopology(BGPDCNConfig,
+                                        generateConfigBGP,
+                                        config, topologyName, portDensityModifications)
+        else:
+            print("Protocol chosen unknown.")
+            os.exit(1)
     else:
         print("topology exists!")
 
-    # Define configuration files for the protocol run on the topology
-    generateConfigMTP(topology)
+    if(config.protocol == MTP):
+        protocolSwitch = MTPSwitch
+        protocolHost = MTPHost
 
-    # Build the folded-Clos topology in Mininet
     mininetTopology = ClosConfigTopo(topology)
+
+    # Don't run BGP, it's only for config testing right now
+    if(config.protocol == BGP):
+        return
 
     # Define the Mininet
     net = Mininet(topo=mininetTopology, 
-                  switch=MTPSwitch,
-                  host=MTPHost,
+                  switch=protocolSwitch,
+                  host=protocolHost,
                   controller=None)
 
     # Run the experiment
     net.start()
     CLI(net)
     net.stop()
-    
-    return   
+
+    return
 
 
 if __name__ == "__main__":
