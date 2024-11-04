@@ -62,7 +62,7 @@ def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> nx.graph:
     with open(os.path.join(CLOS_TOPOS_DIR, fileName), mode="w") as configFile:
         json.dump(topologyConfig, configFile)
 
-    return nx.node_link_graph(json.load(topologyConfig))
+    return nx.node_link_graph(topologyConfig)
 
 
 def generateTopology(closConfigGenerator, nodeConfigGenerator, config, topologyName, portDensityModifications):
