@@ -8,6 +8,7 @@ from mako.template import Template
 COMPUTE_TIER = 0 # No control protocol configuration for the compute nodes.
 CONFIG_DIR = "/tmp" # Place all node config files in the tmp directory.
 
+
 def generateConfigMTP(topology):
     '''
     Create and save configuration files for MTP nodes.
@@ -53,7 +54,7 @@ def generateConfigBGP(topology):
 
     TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
                                      "switches/bgp/config_template/bgp_conf.mako")
-    
+
     # Store information about BGP-speaking neighbors to configure neighborship
     neighboringNodes = []
 
@@ -66,13 +67,15 @@ def generateConfigBGP(topology):
     # Iterate through the nodes in the topology
     for node in topology:
         # Find the node's BGP-speaking neighbors and determine their ASN as well as their IPv4 address used on the subnet shared by the nodes.
-        for neighbor, _ in topology.getNodeAttribute(node, 'ipv4').items():
-            if(topology.isNetworkNode(neighbor)):
-                neighboringNodes.append({'asn':topology.getNodeAttribute(neighbor, 'ASN'), 
-                                         'ip':topology.getNodeAttribute(neighbor, 'ipv4', node)})
+        for neighbor, _ in topology.nodes[node]['ipv4'].items():
+            if(topology.nodes[neighbor]['tier'] > COMPUTE_TIER):
+                neighboringNodes.append({'asn':topology.nodes[neighbor]['ASN'], 
+                                         'ip':topology.nodes[neighbor]['ipv4'][node]})
 
         # In addition to storing neighbor information, store any compute subnets that the node must advertise to neighbors (leaf's only).
-        nodeTemplate = {'neighbors':neighboringNodes, 'bgp_asn': topology.getNodeAttribute(node, 'ASN'), 'networks': topology.getNodeAttribute(node, 'advertise')}
+        nodeTemplate = {'neighbors':neighboringNodes, 
+                        'bgp_asn': topology.nodes[node]['ASN'], 
+                        'networks': topology.nodes[node]['advertise']}
 
         # Process the data and render a custom BGP configuration.
         bgpConfig = bgpTemplate.render(**nodeTemplate)
