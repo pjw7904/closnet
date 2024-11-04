@@ -437,9 +437,9 @@ class BGPDCNConfig(ClosGenerator):
         title = self.getNodeTitle(currentTier, topTier)
 
         if(currentTier == topTier):
-            partialName = title + "-"
+            partialName = title + "_"
         else:
-            partialName = title + prefix + "-"
+            partialName = title + prefix + "_"
 
         # Add the unique number given to this node in the pod.
         name = partialName + nodeNum
