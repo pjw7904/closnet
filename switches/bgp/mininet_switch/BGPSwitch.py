@@ -26,16 +26,24 @@ class BGPSwitch(Node):
         with open(f'./MTP-Mininet/logs/{self.name}.stdout', 'w') as log_file:
             # Start the Zebra daemon
             zebra_process = subprocess.Popen(
-                ['/usr/lib/frr/zebra', '-f', config_file, '-d', '-z', f'/var/run/frr/{self.name}.zebra.api'],
+                ['/usr/lib/frr/zebra', 
+                 '-f', config_file, 
+                 '-d', 
+                 '-z', f'/var/run/frr/{self.name}.zebra.api', 
+                 '-i', f'/var/run/frr/{self.name}.zebra.pid'],
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 env=env
             )
             self.processes.append(zebra_process)
-            
+
             # Start the BGP daemon
             bgpd_process = subprocess.Popen(
-                ['/usr/lib/frr/bgpd', '-f', config_file, '-d', '-z', f'/var/run/frr/{self.name}.bgpd.api'],
+                ['/usr/lib/frr/bgpd', 
+                 '-f', config_file, 
+                 '-d', 
+                 '-z', f'/var/run/frr/{self.name}.bgpd.api', 
+                 '-i', f'/var/run/frr/{self.name}.bgpd.pid'],
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 env=env
@@ -44,11 +52,35 @@ class BGPSwitch(Node):
 
 
     def stop(self):
-        # Ensure all processes are terminated
+        # Ensure all processes are terminated using pkill
+        import os
+
+        # Try to gracefully terminate the managed processes first
         for process in self.processes:
             if process:
                 process.terminate()
-                process.wait()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    # If the process didn't terminate, force kill
+                    process.kill()
+
+        # Now, use pkill to ensure all zebra and bgpd processes for this node are killed
+        os.system(f"sudo pkill -f '/usr/lib/frr/zebra -f /tmp/{self.name}.conf'")
+        os.system(f"sudo pkill -f '/usr/lib/frr/bgpd -f /tmp/{self.name}.conf'")
+
+        # Clean up PID files after ensuring the processes are terminated
+        pid_files = [
+            f"/var/run/frr/{self.name}.zebra.pid",
+            f"/var/run/frr/{self.name}.bgpd.pid"
+        ]
+
+        for pid_file in pid_files:
+            if os.path.exists(pid_file):
+                os.remove(pid_file)
+                print(f"Removed PID file: {pid_file}")
+
+        self.processes = []  # Clear the list of processes after stopping
         print(f"FRR daemons stopped on {self.name}")
 
 
