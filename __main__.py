@@ -17,6 +17,7 @@ from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
 from generators.ClosConfigTopo import ClosConfigTopo
 from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
 from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
+from switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
 from ConfigParser import *
 from ConfigGenerator import *
 
@@ -135,11 +136,11 @@ def main():
         protocolSwitch = MTPSwitch
         protocolHost = MTPHost
 
-    mininetTopology = ClosConfigTopo(topology)
+    elif(config.protocol == BGP):
+        protocolSwitch = BGPSwitch
+        protocolHost = BGPHost
 
-    # Don't run BGP, it's only for config testing right now
-    if(config.protocol == BGP):
-        return
+    mininetTopology = ClosConfigTopo(topology)
 
     # Define the Mininet
     net = Mininet(topo=mininetTopology, 
