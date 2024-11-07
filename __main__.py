@@ -19,7 +19,7 @@ from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
 from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
 from switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
 from ConfigParser import *
-from ConfigGenerator import *
+from NodeConfigGenerator import *
 
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
@@ -66,7 +66,7 @@ def saveTopologyConfig(topologyName: str, topology: ClosGenerator) -> nx.graph:
     return nx.node_link_graph(topologyConfig)
 
 
-def generateTopology(closConfigGenerator, nodeConfigGenerator, config, topologyName, portDensityModifications):
+def generateTopology(closConfigGenerator, config, topologyName, portDensityModifications):
     # Define the Clos topology parameters
     topology = closConfigGenerator(config.ports,
                                    config.tiers,
@@ -77,9 +77,6 @@ def generateTopology(closConfigGenerator, nodeConfigGenerator, config, topologyN
 
     # Save the topology configuration
     topology = saveTopologyConfig(topologyName, topology)
-
-    # Define configuration for switches
-    nodeConfigGenerator(topology)
 
     return topology
 
@@ -119,12 +116,10 @@ def main():
     if(not topology):
         if(config.protocol == MTP):
             topology = generateTopology(MTPConfig,
-                                        generateConfigMTP,
                                         config, topologyName, portDensityModifications)
 
         elif(config.protocol == BGP):
             topology = generateTopology(BGPDCNConfig,
-                                        generateConfigBGP,
                                         config, topologyName, portDensityModifications)
         else:
             print("Protocol chosen unknown.")
@@ -132,11 +127,14 @@ def main():
     else:
         print("topology exists!")
 
+    # Generate the configuration files for each node in the topology.
     if(config.protocol == MTP):
+        generateConfigMTP(topology)
         protocolSwitch = MTPSwitch
         protocolHost = MTPHost
 
     elif(config.protocol == BGP):
+        generateConfigBGP(topology)
         protocolSwitch = BGPSwitch
         protocolHost = BGPHost
 
