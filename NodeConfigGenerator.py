@@ -75,7 +75,8 @@ def generateConfigBGP(topology):
                                             'ip':topology.nodes[neighbor]['ipv4'][node]})
 
             # In addition to storing neighbor information, store any compute subnets that the node must advertise to neighbors (leaf's only).
-            nodeTemplate = {'neighbors':neighboringNodes, 
+            nodeTemplate = {'node_name': node,
+                            'neighbors': neighboringNodes, 
                             'bgp_asn': topology.nodes[node]['ASN'], 
                             'networks': topology.nodes[node]['advertise']}
 
