@@ -1,3 +1,7 @@
+hostname ${node_name}
+!
+frr defaults datacenter
+!
 log file /tmp/${node_name}_bgp.log
 log timestamp precision 3
 !
