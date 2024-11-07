@@ -1,15 +1,16 @@
-from mininet.node import Node, Host
+from mininet.node import Switch, Node, Host
 import subprocess
 
-class BGPSwitch(Node):
+class BGPSwitch(Switch):
     """
     A switch used to run the Border Gateway Protocol 4 (BGP-4) implementation
     provided by the Free Range Routing (FRR) control plane software
     for data center networks.
     """
 
-    def __init__(self, name, **params):
-        super(BGPSwitch, self).__init__(name, **params)
+    def __init__(self, name, **kwargs):
+        kwargs['inNamespace'] = True
+        super(BGPSwitch, self).__init__(name, **kwargs)
         self.processes = []  # List to keep track of daemon processes
 
 
@@ -20,36 +21,29 @@ class BGPSwitch(Node):
         config_file = f"/tmp/{self.name}.conf"
         
         # Define the datacenter profile environment variable
-        env = dict(FRR_PROFILE="datacenter")
+        env = 'FRR_PROFILE="datacenter"'
 
-        # Open a log file to capture the output of each daemon
-        with open(f'./MTP-Mininet/logs/{self.name}.stdout', 'w') as log_file:
-            # Start the Zebra daemon
-            zebra_process = subprocess.Popen(
-                ['/usr/lib/frr/zebra', 
-                 '-f', config_file, 
-                 '-d', 
-                 '-z', f'/var/run/frr/{self.name}.zebra.api', 
-                 '-i', f'/var/run/frr/{self.name}.zebra.pid'],
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                env=env
-            )
-            self.processes.append(zebra_process)
+        # Start Zebra in the node's namespace
+        zebra_cmd = (
+            f'{env} /usr/lib/frr/zebra '
+            f'-f {config_file} '
+            f'-d '
+            f'-z /var/run/frr/{self.name}.zebra.api '
+            f'-i /var/run/frr/{self.name}.zebra.pid'
+        )
+        self.cmd(zebra_cmd)
 
-            # Start the BGP daemon
-            bgpd_process = subprocess.Popen(
-                ['/usr/lib/frr/bgpd', 
-                 '-f', config_file, 
-                 '-d', 
-                 '-z', f'/var/run/frr/{self.name}.bgpd.api', 
-                 '-i', f'/var/run/frr/{self.name}.bgpd.pid'],
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                env=env
-            )
-            self.processes.append(bgpd_process)
+        # Start BGP in the node's namespace
+        bgpd_cmd = (
+            f'{env} /usr/lib/frr/bgpd '
+            f'-f {config_file} '
+            f'-d '
+            f'-z /var/run/frr/{self.name}.bgpd.api '
+            f'-i /var/run/frr/{self.name}.bgpd.pid'
+        )
+        self.cmd(bgpd_cmd)
 
+        print(f"FRR daemons started on {self.name}")
 
     def stop(self):
         # Ensure all processes are terminated using pkill
