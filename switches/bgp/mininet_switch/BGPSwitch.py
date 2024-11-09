@@ -54,6 +54,10 @@ class BGPSwitch(Node):
         self.cmd(start_bgpd)
         self.waitOutput()
 
+        # Load the config via vtysh (not sure if actually needed, so keeping it here just in case)
+        #self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
+        #self.waitOutput()
+
         print(f"FRR daemons started on {self.name}")
 
     def stop(self):
