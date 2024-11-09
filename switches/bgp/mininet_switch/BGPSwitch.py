@@ -37,6 +37,7 @@ class BGPSwitch(Node):
             f'/usr/lib/frr/zebra '
             f'-f {config_file} '
             f'-d '
+            f'-N {self.name} '
             f'-i /tmp/{self.name}.zebra.pid'
         )
         self.cmd(start_zebra)
@@ -47,6 +48,7 @@ class BGPSwitch(Node):
             f'/usr/lib/frr/bgpd '
             f'-f {config_file} '
             f'-d '
+            f'-N {self.name} '
             f'-i /tmp/{self.name}.bgpd.pid'
         )
         self.cmd(start_bgpd)
