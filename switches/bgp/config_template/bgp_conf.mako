@@ -2,7 +2,7 @@ hostname ${node_name}
 !
 frr defaults datacenter
 !
-log file /tmp/${node_name}_bgp.log
+log file /tmp/${node_name}.log
 log timestamp precision 3
 !
 debug bgp updates in

@@ -1,47 +1,56 @@
 from mininet.node import Switch, Node, Host
 import subprocess
 
-class BGPSwitch(Switch):
+class BGPSwitch(Node):
     """
     A switch used to run the Border Gateway Protocol 4 (BGP-4) implementation
     provided by the Free Range Routing (FRR) control plane software
     for data center networks.
     """
 
+    ID = 0
+
     def __init__(self, name, **kwargs):
         kwargs['inNamespace'] = True
         super(BGPSwitch, self).__init__(name, **kwargs)
         self.processes = []  # List to keep track of daemon processes
 
+        BGPSwitch.ID += 1
+        self.switch_id = BGPSwitch.ID
 
     def start(self, controllers):
         print(f"Starting the BGP implementation on {self.name}")
 
+        # Turn on the loopback interface
+        self.cmd('ifconfig lo up')
+        self.waitOutput()
+
+        # Enable IPv4 forwarding
+        self.cmd("sysctl -w net.ipv4.ip_forward=1")
+        self.waitOutput()
+
         # Define the path to the FRR configuration file
         config_file = f"/tmp/{self.name}.conf"
-        
-        # Define the datacenter profile environment variable
-        env = 'FRR_PROFILE="datacenter"'
 
         # Start Zebra in the node's namespace
-        zebra_cmd = (
-            f'{env} /usr/lib/frr/zebra '
+        start_zebra = (
+            f'/usr/lib/frr/zebra '
             f'-f {config_file} '
             f'-d '
-            f'-z /var/run/frr/{self.name}.zebra.api '
-            f'-i /var/run/frr/{self.name}.zebra.pid'
+            f'-i /tmp/{self.name}.zebra.pid'
         )
-        self.cmd(zebra_cmd)
+        self.cmd(start_zebra)
+        self.waitOutput()
 
         # Start BGP in the node's namespace
-        bgpd_cmd = (
-            f'{env} /usr/lib/frr/bgpd '
+        start_bgpd = (
+            f'/usr/lib/frr/bgpd '
             f'-f {config_file} '
             f'-d '
-            f'-z /var/run/frr/{self.name}.bgpd.api '
-            f'-i /var/run/frr/{self.name}.bgpd.pid'
+            f'-i /tmp/{self.name}.bgpd.pid'
         )
-        self.cmd(bgpd_cmd)
+        self.cmd(start_bgpd)
+        self.waitOutput()
 
         print(f"FRR daemons started on {self.name}")
 
@@ -65,8 +74,8 @@ class BGPSwitch(Switch):
 
         # Clean up PID files after ensuring the processes are terminated
         pid_files = [
-            f"/var/run/frr/{self.name}.zebra.pid",
-            f"/var/run/frr/{self.name}.bgpd.pid"
+            f"/tmp/{self.name}.zebra.pid",
+            f"/tmp/{self.name}.bgpd.pid"
         ]
 
         for pid_file in pid_files:
