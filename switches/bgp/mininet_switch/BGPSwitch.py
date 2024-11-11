@@ -1,5 +1,4 @@
-from mininet.node import Switch, Node, Host
-import subprocess
+from mininet.node import Node, Host
 
 class BGPSwitch(Node):
     """
@@ -13,7 +12,6 @@ class BGPSwitch(Node):
     def __init__(self, name, **kwargs):
         kwargs['inNamespace'] = True
         super(BGPSwitch, self).__init__(name, **kwargs)
-        self.processes = []  # List to keep track of daemon processes
 
         BGPSwitch.ID += 1
         self.switch_id = BGPSwitch.ID
@@ -52,55 +50,56 @@ class BGPSwitch(Node):
         self.cmd(start_bgpd)
         self.waitOutput()
 
-        # Load the config via vtysh (not sure if actually needed, so keeping it here just in case)
+        # Load the config via vtysh
         self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
         self.waitOutput()
 
         print(f"FRR daemons started on {self.name}")
 
     def stop(self):
-        # Ensure all processes are terminated using pkill
-        import os
+        """Stops FRR daemons running on this node."""
 
-        # Try to gracefully terminate the managed processes first
-        for process in self.processes:
-            if process:
-                process.terminate()
+        # List of daemons to stop
+        DAEMONS = ('zebra', 'bgpd')
+
+        # Terminate daemons using PIDs from PID files
+        for daemon in DAEMONS:
+            pid_file = f"/tmp/{self.name}.{daemon}.pid"
+
+            if self.cmd(f'test -f {pid_file} && echo "exists"').strip() == 'exists':
+                pid = self.cmd(f'cat {pid_file}').strip()
+
                 try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    # If the process didn't terminate, force kill
-                    process.kill()
+                    # Kill the process inside the node's namespace
+                    self.cmd(f'kill {pid}')
+                    print(f"Terminated {daemon} for {self.name} (PID {pid})")
 
-        # Now, use pkill to ensure all zebra and bgpd processes for this node are killed
-        os.system(f"sudo pkill -f '/usr/lib/frr/zebra -f /tmp/{self.name}.conf'")
-        os.system(f"sudo pkill -f '/usr/lib/frr/bgpd -f /tmp/{self.name}.conf'")
+                except Exception as e:
+                    print(f"Failed to terminate {daemon} for {self.name}: {e}")
 
-        # Clean up PID files after ensuring the processes are terminated
-        pid_files = [
-            f"/tmp/{self.name}.zebra.pid",
-            f"/tmp/{self.name}.bgpd.pid"
-        ]
+                # Remove the PID file
+                self.cmd(f'rm -f {pid_file}')
 
-        for pid_file in pid_files:
-            if os.path.exists(pid_file):
-                os.remove(pid_file)
-                print(f"Removed PID file: {pid_file}")
+            else:
+                print(f"PID file not found: {pid_file}")
 
-        self.processes = []  # Clear the list of processes after stopping
-        print(f"FRR daemons stopped on {self.name}")
+        # Clean up any remaining files related to this node (not used currently, but if needed in the future)
+        #self.cmd(f'rm -f /tmp/{self.name}.*')
+
+        print(f"FRR daemons stopped on {self.name}\n")
 
 
     def config(self, **kwargs):
         # Call the base class config to do standard Mininet configuration
         super(BGPSwitch, self).config(**kwargs)
+
         # Start the FRR daemons once the node is configured
         self.start()
 
 
     def terminate(self):
         # Ensure all daemons are stopped when the node is terminated
-        self.stop()
+        #self.stop() --> this calls it twice when Mininet exit is called, but keeping just in case
         super(BGPSwitch, self).terminate()
 
 
