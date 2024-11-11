@@ -35,7 +35,6 @@ class BGPSwitch(Node):
         # Start Zebra in the node's namespace
         start_zebra = (
             f'/usr/lib/frr/zebra '
-            f'-f {config_file} '
             f'-d '
             f'-N {self.name} '
             f'-i /tmp/{self.name}.zebra.pid'
@@ -46,7 +45,6 @@ class BGPSwitch(Node):
         # Start BGP in the node's namespace
         start_bgpd = (
             f'/usr/lib/frr/bgpd '
-            f'-f {config_file} '
             f'-d '
             f'-N {self.name} '
             f'-i /tmp/{self.name}.bgpd.pid'
@@ -55,8 +53,8 @@ class BGPSwitch(Node):
         self.waitOutput()
 
         # Load the config via vtysh (not sure if actually needed, so keeping it here just in case)
-        #self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
-        #self.waitOutput()
+        self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
+        self.waitOutput()
 
         print(f"FRR daemons started on {self.name}")
 
