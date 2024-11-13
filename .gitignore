@@ -2,8 +2,8 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode,c
 
 ### MTP-Mininet ###
-switches/*/bin/*
-topologies/*
+closnet/switches/*/bin/*
+closnet/topologies/*
 logs/*
 
 ### C ###
