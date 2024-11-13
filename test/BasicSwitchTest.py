@@ -1,18 +1,17 @@
 '''
 author: Peter Willis (pjw7904@rit.edu)
 
-Testing out the custom topology and switch found in this directory.
+Testing out the custom topology and switch (found in switches --> test).
 '''
 
 # Mininet libraries
 from mininet.net import Mininet
-from mininet.topo import Topo
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel
 from mininet.cli import CLI
 
-# Custom code
-from switches.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
-from generators.GraphmlTopo import GraphmlTopo
+# Custom libraries
+from ..switches.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
+from ..generators.GraphmlTopo import GraphmlTopo
 
 def logTest():
     '''
@@ -20,7 +19,7 @@ def logTest():
     '''
 
     # Define the topology type
-    testTopology = GraphmlTopo("graphs/triangle.graphml")
+    testTopology = GraphmlTopo("../topologies/graphml/triangle.graphml")
 
     # Define the network, use the TEST SWTICH
     net = Mininet(topo=testTopology, 
