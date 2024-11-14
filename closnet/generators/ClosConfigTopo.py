@@ -1,6 +1,5 @@
 # Mininet libraries
 from mininet.topo import Topo
-from mininet.log import info
 
 # External libraries
 import networkx as nx

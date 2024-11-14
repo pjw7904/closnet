@@ -8,16 +8,15 @@ import networkx as nx
 
 # Mininet libraries
 from mininet.net import Mininet
-from mininet.topo import Topo
-from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 
 # Custom libraries
 from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
 from generators.ClosConfigTopo import ClosConfigTopo
-from switches.test.mininet_switch.BasicCustomSwitch import CCodeSwitch
+
 from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
 from switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
+
 from ConfigParser import *
 from NodeConfigGenerator import *
 
@@ -30,7 +29,7 @@ BGP = "bgp"
 
 def loadTopologyConfig(topologyName: str) -> nx.graph:
     '''
-    load a JSON-formatted configuration file for the topology.
+    Load a JSON-formatted configuration file for the topology.
 
     :param topologyName: The name for the topology.
     :returns: The topology configuration as a NetworkX graph.
@@ -146,7 +145,7 @@ def main():
                   host=protocolHost,
                   controller=None)
 
-    # Run the experiment
+    # Run the experiment (change to start in order from tier N to tier 0)
     net.start()
     CLI(net)
     net.stop()
