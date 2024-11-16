@@ -10,11 +10,14 @@ class ClosConfigTopo(Topo):
     LEAF_TIER = 1
     COMPUTE_TIER = 0
 
-    def build(self, clos: nx.graph) -> None:
-        self.clos = clos
-        self.addedNodes = {}
+    def __init__(self, clos: nx.Graph) -> None:
+            self.clos = clos
+            self.addedNodes = {}
+            self.nodesByTier = {}
+            super(ClosConfigTopo, self).__init__()
 
-        for edge in clos.edges():
+    def build(self) -> None:
+        for edge in self.clos.edges():
             # Add the nodes to the topology
             node1 = self.getNode(edge[0])
             node2 = self.getNode(edge[1])
@@ -31,6 +34,9 @@ class ClosConfigTopo(Topo):
 
     def getNode(self, node: str):
         if(node not in self.addedNodes):
+            # Get the node's topology tier to determine the type of device.
+            nodeTier = self.clos.nodes[node]['tier']
+
             if(self.clos.nodes[node]['tier'] > self.COMPUTE_TIER):
                 mininetNode = self.addSwitch(node)
 
@@ -40,12 +46,19 @@ class ClosConfigTopo(Topo):
                 hostIP = list(hostIPDict.values())[0]
                     
                 mininetNode = self.addHost(node, 
-                                           ip=f"{hostIP}/24", defaultRoute=f"via {self.clos.nodes[defaultGateway]['ipv4'][node]}")
+                                           ip=f"{hostIP}/24", 
+                                           defaultRoute=f"via {self.clos.nodes[defaultGateway]['ipv4'][node]}")
 
             else:
                 raise Exception(f"{node} does not have a normal tier value, not adding.")
 
             self.addedNodes[node] = mininetNode
+
+            # Record the node as part of it's given tier
+            if nodeTier not in self.nodesByTier:
+                self.nodesByTier[nodeTier] = []
+
+            self.nodesByTier[nodeTier].append(node)  # Store the node name (ID)
 
         else:
             mininetNode = self.addedNodes[node]
