@@ -13,16 +13,16 @@ class MTPSwitch(Node):
 
 
     def start(self, controllers):
-        # Start the C program in the background
-        print(f"Starting the MTP implementation on {self.name}")
-
         # Open the log file in write mode
         with open(f'/tmp/{self.name}.stdout', 'w') as log_file:
             # Start the process (look into popen() function of node)
+            # Start the C program in the background
             self.process = subprocess.Popen(
                 ['./closnet/switches/mtp/bin/mtp', self.name, "/tmp"],
                 stdout=log_file,
                 stderr=subprocess.STDOUT)
+        
+        print(f"MTP started on {self.name}")
 
 
     def stop(self):
@@ -30,7 +30,7 @@ class MTPSwitch(Node):
         if self.process:
             self.process.terminate()
             self.process.wait()
-            print(f"{self.name} has stopped")
+            print(f"MTP stopped on {self.name}\n")
 
 
     def attach(self, intf):
@@ -41,7 +41,6 @@ class MTPSwitch(Node):
     def detach(self, intf):
         "Disconnect a data port"
         assert(0)
-
 
 
 class MTPHost(Host):
