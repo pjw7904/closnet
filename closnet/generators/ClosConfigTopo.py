@@ -40,6 +40,12 @@ class ClosConfigTopo(Topo):
             if(self.clos.nodes[node]['tier'] > self.COMPUTE_TIER):
                 mininetNode = self.addSwitch(node)
 
+                # Record the node as part of it's given tier
+                if nodeTier not in self.nodesByTier:
+                    self.nodesByTier[nodeTier] = []
+
+                self.nodesByTier[nodeTier].append(node)  # Store the node name (ID)
+
             elif(self.clos.nodes[node]['tier'] == self.COMPUTE_TIER):
                 hostIPDict = self.clos.nodes[node].get('ipv4')
                 defaultGateway = list(hostIPDict.keys())[0]
@@ -53,12 +59,6 @@ class ClosConfigTopo(Topo):
                 raise Exception(f"{node} does not have a normal tier value, not adding.")
 
             self.addedNodes[node] = mininetNode
-
-            # Record the node as part of it's given tier
-            if nodeTier not in self.nodesByTier:
-                self.nodesByTier[nodeTier] = []
-
-            self.nodesByTier[nodeTier].append(node)  # Store the node name (ID)
 
         else:
             mininetNode = self.addedNodes[node]

@@ -9,6 +9,7 @@ import networkx as nx
 # Mininet libraries
 from mininet.net import Mininet
 from mininet.cli import CLI
+from mininet.log import setLogLevel, info
 
 # Custom libraries
 from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
@@ -85,6 +86,9 @@ def main():
     Entry into the program. Design a folded-Clos topology and pick a protocol to install on it.
     '''
 
+    # Set the logging level
+    setLogLevel('info')
+
     # Grab command-line arguments to build the topology
     config = parseArgs()
 
@@ -143,11 +147,24 @@ def main():
     net = Mininet(topo=mininetTopology, 
                   switch=protocolSwitch,
                   host=protocolHost,
-                  controller=None)
+                  controller=None,
+                  build=False)
 
-    # Run the experiment (change to start in order from tier N to tier 0)
-    net.start()
+    # Build the Mininet
+    net.build()
+
+    # Start nodes in the folded-Clos from tiers N to 0
+    for tier in sorted(mininetTopology.nodesByTier.keys(), reverse=True):
+        nodesInCurrentTier = mininetTopology.nodesByTier[tier]
+        info(f"\n*** Starting switches in tier {tier}:\n")
+
+        for node in nodesInCurrentTier:
+            net[node].start([]) # empty controller list argument is required, even though we don't use controllers
+
+    # Start the interactive Mininet terminal
     CLI(net)
+
+    # Shut down all nodes and tear down the Mininet
     net.stop()
 
     return
