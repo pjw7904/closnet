@@ -17,8 +17,6 @@ class BGPSwitch(Node):
         self.switch_id = BGPSwitch.ID
 
     def start(self, controllers):
-        print(f"Starting the BGP implementation on {self.name}")
-
         # Turn on the loopback interface
         self.cmd('ifconfig lo up')
         self.waitOutput()
@@ -54,7 +52,7 @@ class BGPSwitch(Node):
         self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
         self.waitOutput()
 
-        print(f"FRR daemons started on {self.name}")
+        print(f"FRR daemons (zebra & bgpd) started on {self.name}")
 
     def stop(self):
         """Stops FRR daemons running on this node."""

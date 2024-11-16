@@ -17,10 +17,10 @@ class MTPSwitch(Node):
         print(f"Starting the MTP implementation on {self.name}")
 
         # Open the log file in write mode
-        with open(f'./MTP-Mininet/logs/{self.name}.stdout', 'w') as log_file:
+        with open(f'/tmp/{self.name}.stdout', 'w') as log_file:
             # Start the process (look into popen() function of node)
             self.process = subprocess.Popen(
-                ['./MTP-Mininet/switches/mtp/bin/mtp', self.name, "/tmp"],
+                ['./closnet/switches/mtp/bin/mtp', self.name, "/tmp"],
                 stdout=log_file,
                 stderr=subprocess.STDOUT)
 
