@@ -28,6 +28,7 @@
 #define MAX_FILE_PATH_LENGTH 1024
 #define CONF_EXT "conf"
 #define LOG_EXT "log"
+#define DOWN_EXT "down"
 
 /*****************************************
  * STRUCTURES 

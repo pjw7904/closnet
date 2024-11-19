@@ -43,7 +43,7 @@ char* getFilePath(const char* directory, const char* name, const char* extension
         exit(EXIT_FAILURE);
     }
 
-    // Create the full path in the format: <directory>/<name>.conf
+    // Create the full path in the format: <directory>/<name>.<extension>
     snprintf(filePath, MAX_FILE_PATH_LENGTH, "%s/%s.%s", directory, name, extension);
 
     return filePath;

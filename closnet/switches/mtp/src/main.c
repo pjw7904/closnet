@@ -22,6 +22,8 @@
 Config mtpConfig = {0};
 uint8_t VID_octet = 3; // Third octet in IPv4 address, example: octet value C in address A.B.C.D
 char my_VID[VID_LEN] = {'\0'};
+char *nodeName;
+char *configDirectory;
 
 /*
  * Control Ports (MTP-speaking interfaces)
@@ -95,8 +97,15 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    char *nodeName = argv[1];
-    char *configDirectory = argv[2];
+    nodeName = argv[1];
+    configDirectory = argv[2];
+
+    // If the inputted config directory is not valid, stop the program.
+    if(!isValidDirectory(configDirectory)) 
+    {
+        fprintf(stderr, "Error: '%s' is not a valid directory.\n", configDirectory);
+        return 1;
+    }
 
     // Set up a SIGHUP (signal hangup) handler to gracefully stop running MTP.
     if(signal(SIGHUP, handleSignal) == SIG_ERR) 
@@ -117,13 +126,6 @@ int main(int argc, char **argv)
     {
         perror("signal");
         exit(EXIT_FAILURE);
-    }
-
-    // If the inputted config directory is not valid, stop the program.
-    if(!isValidDirectory(configDirectory)) 
-    {
-        fprintf(stderr, "Error: '%s' is not a valid directory.\n", configDirectory);
-        return 1;
     }
 
     // Read in the configuration for the MTP switch.
@@ -485,8 +487,9 @@ void handleSignal(int sig)
     // If file logging is currently enabled, close the file
     close_log_file();
 
+    char* downFilePath = getFilePath(configDirectory, nodeName, DOWN_EXT);
     FILE* fptr;
-    fptr = fopen("node_down.log", "w");
+    fptr = fopen(downFilePath, "w");
 
     // checking if the file is opened successfully
     if (fptr == NULL) 
@@ -499,6 +502,7 @@ void handleSignal(int sig)
     fprintf(fptr,"%lld\n", current_timestamp);
     fflush(fptr);
     fclose(fptr);
+    free(downFilePath);
 
     exit(EXIT_SUCCESS);
 }
