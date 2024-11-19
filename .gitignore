@@ -3,7 +3,17 @@
 
 ### MTP-Mininet ###
 closnet/switches/*/bin/*
-closnet/topologies/*
+
+# Leave two example clos topologies, one for MTP and one for BGP
+closnet/topologies/clos/*
+!closnet/topologies/clos/bgp_2_4_1-1.json
+!closnet/topologies/clos/mtp_2_4_1-1.json
+
+# Leave two example graph topologies, one with and without hosts.
+closnet/topologies/graphml/*
+!closnet/topologies/graphml/host_test.graphml
+!closnet/topologies/graphml/triangle.graphml
+
 logs/*
 
 ### C ###
