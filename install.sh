@@ -11,7 +11,7 @@ apt update & apt install -y python3 python3-pip curl
 # INSTALL MININET
 echo "Installing Mininet..."
 
-apt install mininet
+apt install -y mininet
 ############################################
 
 ############################################
@@ -53,6 +53,9 @@ fi
 echo "Installing C development tools..."
 
 apt install -y build-essential autoconf automake libtool bison flex gdb cmake pkg-config libpcap-dev
+
+# Create a directory for the MTP binary
+mkdir closnet/switches/mtp/bin
 
 # Compile MTP source files
 MTP_SRC_DIR="closnet/switches/mtp/src"
