@@ -1,6 +1,7 @@
 # Core libraries
 import json
 import os
+import subprocess
 from sys import exit
 
 # External libraries
@@ -101,6 +102,9 @@ def main():
     print(topologyMessage)
     if(not validTopology):
         exit(0)
+
+    # Remove any lingering log files so that it doesn't screw up incoming log files.
+    subprocess.run("sudo rm /tmp/*.log", shell=True)
 
     # Configure the custom southbound port density ranges if necessary
     if(config.southbound):
