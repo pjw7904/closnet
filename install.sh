@@ -5,6 +5,8 @@
 echo "Installing Python and curl..."
 
 apt update & apt install -y python3 python3-pip curl
+
+mkdir logs
 ############################################
 
 ############################################
