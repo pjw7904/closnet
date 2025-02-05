@@ -1,0 +1,6 @@
+{
+    "protocol": "bgp",
+    "tiers": 2,
+    "ports": 4,
+    "southbound": [[1, 1]]
+  }

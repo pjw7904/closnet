@@ -1,23 +1,42 @@
 # Core libraries
 import argparse
+import json
 
 
 def parseArgs() -> argparse.Namespace:
     '''
     Read in the CLI arguments to build a folded-Clos Mininet.
-
+    A JSON configuration file with the same arguments can be provided as well, the function can read from both.
+    
     :returns: The inputted arguments.
     '''
-    
-    # ArgumentParser object to read in command-line arguments
+
+    # First parser: just for --config so we can detect it without requiring other args
+    configFileParser = argparse.ArgumentParser(add_help=False)
+    configFileParser.add_argument("-c", "--config",
+                           type=str, 
+                           help="Path to a JSON config file.", 
+                           default=None)
+
+    # Parse known args first (so it won't fail if the protocol arg is missing)
+    prelimArgs, remaining_argv = configFileParser.parse_known_args()
+
+    # Second parser: standard ArgumentParser object to read in command-line arguments
     argParser = argparse.ArgumentParser(description="Network control protocol experimentation on folded-Clos Toplogies")
 
     # Protocol to install on the topology
     argParser.add_argument('protocol', 
-                           choices=["mtp", "bgp"], 
+                           choices=["mtp", "bgp"],
+                           nargs='?',
                            help="The control protocol to install on the Mininet.")
 
     # Folded-Clos topology configuration
+    # Include --config here too so it shows up in --help, etc.
+    argParser.add_argument("-c", "--config", 
+                           type=str, 
+                           help="Path to a JSON config file.", 
+                           default=None)
+
     argParser.add_argument("-t", "--tiers", 
                            type=int, 
                            metavar='numOfTiers', 
@@ -32,8 +51,17 @@ def parseArgs() -> argparse.Namespace:
                             nargs=2, action='append', type=int, 
                             help='The number of links to a tier below by specficing the tier and the number of southbound ports per switch.')
 
-    # Parse the arguments
-    args = argParser.parse_args()
+    # If a JSON config was passed in, load it. Then set those values as defaults.
+    if prelimArgs.config:
+        with open(prelimArgs.config, "r") as f:
+            config_data = json.load(f)
+
+        # This will fill in parser defaults with anything from the JSON cofig file,
+        # e.g., {"protocol": "bgp", "tiers": 3, "ports": 4, "southbound": [[1,1], [3,2]]}
+        argParser.set_defaults(**config_data)
+
+    # Now parse again (fully), so that CLI overrides JSON if both are specified.
+    args = argParser.parse_args(remaining_argv)
 
     return args
 
