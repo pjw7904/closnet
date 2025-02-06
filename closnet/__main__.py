@@ -104,7 +104,7 @@ def main():
         exit(0)
 
     # Remove any lingering log files so that it doesn't screw up incoming log files.
-    subprocess.run("sudo rm /tmp/*.log", shell=True)
+    clearNodeConfigFiles()
 
     # Configure the custom southbound port density ranges if necessary
     if(config.southbound):

@@ -1,5 +1,6 @@
 # Core libraries
 import os
+from pathlib import Path
 
 # External libraries
 from mako.template import Template
@@ -7,7 +8,7 @@ from mako.template import Template
 # Constants
 COMPUTE_TIER = 0 # No control protocol configuration for the compute nodes.
 CONFIG_DIR = "/tmp" # Place all node config files in the tmp directory.
-
+CONFIG_EXTENSIONS = {".conf", ".log", ".stdout", ".down", ".pid"} # All generated node config files contain a subset of these file extensions
 
 def generateConfigMTP(topology):
     '''
@@ -86,5 +87,21 @@ def generateConfigBGP(topology):
             # Save the configuration in the file <node_name>.conf
             with open(os.path.join(CONFIG_DIR, f"{node}.conf"), 'w') as configFile:
                 configFile.write(bgpConfig)
+
+    return
+
+def clearNodeConfigFiles() -> None:
+    '''
+    Delete data from prior Closnet runs.
+    '''
+
+    configDir = Path(CONFIG_DIR)
+
+    for file in configDir.iterdir():
+        if file.suffix in CONFIG_EXTENSIONS:
+            try:
+                file.unlink()
+            except FileNotFoundError:
+                print(f"Issue deleting file {file.name}")
 
     return
