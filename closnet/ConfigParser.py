@@ -11,9 +11,9 @@ def parseArgs() -> argparse.Namespace:
     :returns: The inputted arguments.
     '''
 
-    # First parser: just for --config so we can detect it without requiring other args
+    # First parser: just for --file so we can detect it without requiring other args
     configFileParser = argparse.ArgumentParser(add_help=False)
-    configFileParser.add_argument("-c", "--config",
+    configFileParser.add_argument("-f", "--file",
                            type=str, 
                            help="Path to a JSON config file.", 
                            default=None)
@@ -31,8 +31,8 @@ def parseArgs() -> argparse.Namespace:
                            help="The control protocol to install on the Mininet.")
 
     # Folded-Clos topology configuration
-    # Include --config here too so it shows up in --help, etc.
-    argParser.add_argument("-c", "--config", 
+    # Include --file here too so it shows up in --help, etc.
+    argParser.add_argument("-f", "--file", 
                            type=str, 
                            help="Path to a JSON config file.", 
                            default=None)
