@@ -4,5 +4,6 @@
     "ports": 4,
     "southbound": [[1, 1]],
     "node_to_fail": "L_1",
-    "neighbor_of_failing_node": "T_1"
+    "neighbor_of_failing_node": "T_1",
+    "log_dir_path": "/home/pjw7904/MTP-Mininet/logs"
   }
