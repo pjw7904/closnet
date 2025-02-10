@@ -1,6 +1,7 @@
 # Core libraries
 import argparse
 import json
+import sys
 
 
 def parseArgs() -> argparse.Namespace:
@@ -51,17 +52,24 @@ def parseArgs() -> argparse.Namespace:
                             nargs=2, action='append', type=int, 
                             help='The number of links to a tier below by specficing the tier and the number of southbound ports per switch.')
 
-    # If a JSON config was passed in, load it. Then set those values as defaults.
-    if prelimArgs.config:
-        with open(prelimArgs.config, "r") as f:
-            config_data = json.load(f)
+    # If a JSON config was passed in via the preliminary parse, load it and set those values as defaults.
+    if prelimArgs.file:
+        try:
+            with open(prelimArgs.file, "r") as f:
+                config_data = json.load(f)
 
-        # This will fill in parser defaults with anything from the JSON cofig file,
-        # e.g., {"protocol": "bgp", "tiers": 3, "ports": 4, "southbound": [[1,1], [3,2]]}
-        argParser.set_defaults(**config_data)
+            # Set JSON values as defaults.
+            argParser.set_defaults(**config_data)
+
+        except FileNotFoundError:
+            sys.exit(f"Error: The file '{prelimArgs.file}' was not found.")
 
     # Now parse again (fully), so that CLI overrides JSON if both are specified.
     args = argParser.parse_args(remaining_argv)
+
+    # Ensure that the file argument is included in the final args.
+    if args.file is None:
+        args.file = prelimArgs.file
 
     return args
 
