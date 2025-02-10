@@ -18,7 +18,7 @@ def failNetworkInterface(net, targetNode, neighborNode):
         intf_to_disable = link.intf2
 
     # Record the time of failure
-    timestamp = subprocess.check_output(['date', '+"%s%3N"'], text=True)
+    timestamp = subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
 
     # Disable the interface
     intf_to_disable.ifconfig('down')
@@ -65,7 +65,7 @@ def collectMTPNodeDowntimeLogs(dirPath):
     return
 
 
-def collectProtocolLogs(dirPath):
+def copyProtocolLogs(dirPath):
     # Convert the search directory and output file to Path objects
     search_dir = Path("/tmp").resolve()
     output_path = Path(dirPath).resolve()    
@@ -84,8 +84,10 @@ def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp):
     Copy protocol log files into a directory for a given experiment run to be analyzed.
     '''
 
+    experiment_name = f"{topologyName}_{intfFailureTimestamp}"
+
     # Create the experiment directory.
-    log_dir_path = Path(logDirPath).resolve() / f"{protocol}" / f"{topologyName}_{intfFailureTimestamp}"
+    log_dir_path = Path(logDirPath).resolve() / f"{protocol}" / experiment_name
     log_dir_path.mkdir(parents=True, exist_ok=True)
 
     # Define the two experiment-specific subdirectories
@@ -96,7 +98,7 @@ def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp):
     downtime_dir.mkdir(exist_ok=True)
 
     # Copy the protocol log files into the experiment directory
-    collectProtocolLogs(convergence_dir.as_posix())
+    copyProtocolLogs(convergence_dir.as_posix())
 
     # Create the interface downtime log file and record the downtime inside of it
     intf_down_file = downtime_dir / "intf_down.log"
@@ -105,3 +107,5 @@ def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp):
     # Create the node downtime log file and record each node's downtime inside of it
     nodes_down_file = downtime_dir / "nodes_down.log"
     collectMTPNodeDowntimeLogs(nodes_down_file.as_posix())
+
+    return experiment_name
