@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 from sys import exit
+from time import sleep
 
 # External libraries
 import networkx as nx
@@ -165,8 +166,13 @@ def main():
         for node in nodesInCurrentTier:
             net[node].start([]) # empty controller list argument is required, even though we don't use controllers
 
-    # Start the interactive Mininet terminal
-    CLI(net)
+    # Start the interactive Mininet terminal or the experiment
+    if(config.file):
+        timeToSleep = config.tiers * 3
+        info(f"\nGiving the nodes {timeToSleep} seconds to get converged...\n")
+        sleep(timeToSleep)
+    else:
+        CLI(net)
 
     # Shut down all nodes and tear down the Mininet
     net.stop()
