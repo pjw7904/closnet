@@ -95,9 +95,7 @@ def main():
     config = parseArgs()
 
     # Validate the folded-Clos configuration and determine if this topology already has been saved.
-    topologyStatus = validateTopology(config)
-    validTopology = topologyStatus[0] # valid = True, not valid = False
-    topologyMessage = topologyStatus[1] # prints out a message for the user
+    validTopology, topologyMessage = validateTopology(config)
 
     # If the topology designed is not a valid folded-Clos topology, end the program
     print(topologyMessage)
