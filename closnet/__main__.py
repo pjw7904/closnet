@@ -180,13 +180,17 @@ def main():
         sleep(timeToSleep)
 
         # Fail the specified interface and confirm the operation was successful
-        intf_is_down = failNetworkInterface(net, config.node_to_fail, config.neighbor_of_failing_node)
+        intf_is_down, failure_timestamp = failNetworkInterface(net, config.node_to_fail, config.neighbor_of_failing_node)
 
         if(not intf_is_down):
-            info(f"\nInterface failure was not successful.\n")
+            info(f"EXPERIMENT STEP 2: Interface failure was not successful.\n")
             stopNetAndCleanup()
         else:
             info(f"EXPERIMENT STEP 2: The interface on {config.node_to_fail} was failed connected to {config.neighbor_of_failing_node}\n")
+
+        # Give the topology time for reconvergence after the the interface failure
+        info(f"EXPERIMENT STEP 3: Giving the nodes {timeToSleep} seconds to get reconverged...\n")
+        sleep(timeToSleep)
 
     else:
         CLI(net)
