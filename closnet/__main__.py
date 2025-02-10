@@ -12,6 +12,7 @@ import networkx as nx
 from mininet.net import Mininet
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
+from mininet.clean import cleanup
 
 # Custom libraries
 from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
@@ -23,12 +24,17 @@ from switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
 from ConfigParser import *
 from NodeConfigGenerator import *
 
+from experiment import *
+
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
 GRAPHML_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/graphml")
 MTP = "mtp"
 BGP = "bgp"
 
+def stopNetAndCleanup():
+    cleanup()
+    exit(0)
 
 def loadTopologyConfig(topologyName: str) -> nx.graph:
     '''
@@ -96,11 +102,11 @@ def main():
 
     # Validate the folded-Clos configuration and determine if this topology already has been saved.
     validTopology, topologyMessage = validateTopology(config)
+    print(topologyMessage)
 
     # If the topology designed is not a valid folded-Clos topology, end the program
-    print(topologyMessage)
     if(not validTopology):
-        exit(0)
+        stopNetAndCleanup()
 
     # Remove any lingering log files so that it doesn't screw up incoming log files.
     clearNodeConfigFiles()
@@ -129,7 +135,7 @@ def main():
                                         config, topologyName, portDensityModifications)
         else:
             print("Protocol chosen unknown.")
-            os.exit(1)
+            stopNetAndCleanup()
     else:
         print("topology exists!")
 
@@ -166,9 +172,22 @@ def main():
 
     # Start the interactive Mininet terminal or the experiment
     if(config.file):
+        info(f"\n*** Starting the experiment:\n")
+
+        # Give the topology time for initial convergence
         timeToSleep = config.tiers * 3
-        info(f"\nGiving the nodes {timeToSleep} seconds to get converged...\n")
+        info(f"EXPERIMENT STEP 1: Giving the nodes {timeToSleep} seconds to get converged...\n")
         sleep(timeToSleep)
+
+        # Fail the specified interface and confirm the operation was successful
+        intf_is_down = failNetworkInterface(net, config.node_to_fail, config.neighbor_of_failing_node)
+
+        if(not intf_is_down):
+            info(f"\nInterface failure was not successful.\n")
+            stopNetAndCleanup()
+        else:
+            info(f"EXPERIMENT STEP 2: The interface on {config.node_to_fail} was failed connected to {config.neighbor_of_failing_node}\n")
+
     else:
         CLI(net)
 

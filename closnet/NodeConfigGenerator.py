@@ -101,6 +101,7 @@ def clearNodeConfigFiles() -> None:
         if file.suffix in CONFIG_EXTENSIONS:
             try:
                 file.unlink()
+
             except FileNotFoundError:
                 print(f"Issue deleting file {file.name}")
 
