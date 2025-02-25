@@ -3,6 +3,15 @@ import subprocess
 from pathlib import Path
 import shutil
 
+
+def recordSystemTime():
+    '''
+    Record the current time in Epoch notation.
+    '''
+
+    return subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
+
+
 def failNetworkInterface(net, targetNode, neighborNode):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor.
@@ -18,7 +27,7 @@ def failNetworkInterface(net, targetNode, neighborNode):
         intf_to_disable = link.intf2
 
     # Record the time of failure
-    timestamp = subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
+    timestamp = recordSystemTime()
 
     # Disable the interface
     intf_to_disable.ifconfig('down')
@@ -79,11 +88,13 @@ def copyProtocolLogs(dirPath):
 
     return
 
-def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp):
+
+def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp, experimentStopTimestamp):
     '''
-    Copy protocol log files into a directory for a given experiment run to be analyzed.
+    Copy protocol log files from a test into a directory to be analyzed.
     '''
 
+    # Generate a name for the experiment instance that was run
     experiment_name = f"{topologyName}_{intfFailureTimestamp}"
 
     # Create the experiment directory.
@@ -104,8 +115,8 @@ def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp):
     intf_down_file = downtime_dir / "intf_down.log"
     intf_down_file.write_text(f"{intfFailureTimestamp}")
 
-    # Create the node downtime log file and record each node's downtime inside of it
-    nodes_down_file = downtime_dir / "nodes_down.log"
-    collectMTPNodeDowntimeLogs(nodes_down_file.as_posix())
+    # Create the test downtime log file and record the experiment stop time
+    experiment_stop_file = downtime_dir / "experiment_stop.log"
+    experiment_stop_file.write_text(f"{experimentStopTimestamp}")
 
     return experiment_name
