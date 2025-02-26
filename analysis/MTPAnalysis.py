@@ -3,7 +3,7 @@ import re
 import logging
 
 # Topology and experiment information
-LOG_DIR_PATH = "/home/pjw7904/MTP-Mininet/logs/mtp/mtp_2_4_1-1_1740497425069"
+LOG_DIR_PATH = "/home/pjw7904/MTP-Mininet/logs/mtp/mtp_2_4_1-1_1740540503602"
 DOWNTIME_DIR = "downtime"
 CONVERGENCE_DIR = "convergence"
 RESULTS_FILE = os.path.join(LOG_DIR_PATH, "results.log")
@@ -89,6 +89,9 @@ def getNodeConvergenceTime(logFile):
                 if match:
                     timestamp = int(match.group(1))
 
+                    if timestamp < failureTime:
+                        raise Exception(f"Log error: 'Detected a failure' timestamp {timestamp} is before the interface failure time {failureTime}.")
+
                     if timestamp < testStopTime:
                         return FAILURE_DETECTION, timestamp
                     
@@ -97,6 +100,9 @@ def getNodeConvergenceTime(logFile):
                 
                 if match:
                     timestamp = int(match.group(1))
+
+                    if timestamp < failureTime:
+                        raise Exception(f"Log error: 'FAILURE UPDATE' timestamp {timestamp} is before the interface failure time {failureTime}.")
 
                     if timestamp < testStopTime:
                         return FAILURE_UPDATE, timestamp
