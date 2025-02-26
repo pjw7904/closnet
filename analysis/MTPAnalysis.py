@@ -1,10 +1,13 @@
 import os
 import re
+import logging
 
 # Topology and experiment information
 LOG_DIR_PATH = "/home/pjw7904/MTP-Mininet/logs/mtp/mtp_2_4_1-1_1740497425069"
 DOWNTIME_DIR = "downtime"
 CONVERGENCE_DIR = "convergence"
+RESULTS_FILE = os.path.join(LOG_DIR_PATH, "results.log")
+
 NETWORK_NODE_PREFIXES = "T,S,L"
 COMPUTE_NODE_PREFIXES = "C"
 
@@ -101,7 +104,6 @@ def getNodeConvergenceTime(logFile):
     return CANNOT_DETERMINE_CONVERGENCE_TIME, CANNOT_DETERMINE_CONVERGENCE_TIME
 
 
-
 # STEP 1: Parse and record timestamps for downtime (interface, network)
 for logFile in getResultsFile(DOWNTIME_DIR):
     if("experiment_stop" in logFile): # Determine what the test stoptime was.
@@ -111,9 +113,18 @@ for logFile in getResultsFile(DOWNTIME_DIR):
         failureTime = getDownTime(logFile)
     
     else:
-        print(f"Unknown file {logFile}")
+        logging.info(f"Unknown file {logFile}")
 
-print(f"Interface failure timestamp: {failureTime}\nTest stop timestamp: {testStopTime}")
+# Open a log file and write results to it
+logging.basicConfig(
+    filename=RESULTS_FILE,
+    level=logging.INFO,
+    format='%(message)s',
+    filemode='w'
+)
+
+logging.info("=== EXPERIMENT TIMESTAMPS ===")
+logging.info(f"Interface failure timestamp: {failureTime}\nExperiment teardown timestamp: {testStopTime}\n")
 
 
 # Control Overhead values
@@ -137,15 +148,18 @@ for logFile in getResultsFile(CONVERGENCE_DIR):
         totalOverhead += nodeOverhead
     
     else:
-        print(f"Log file {logFile} is empty")
+        logging.info(f"Log file {logFile} is empty")
 
 # Calculate blast radius as the fraction of total nodes that received updates
 blastRadius = (effectedNodeCount/totalNodeCount) * 100
 
 # Print results
-print(f"Overhead: {totalOverhead} bytes")
-print(f"\nBlast radius: {blastRadius:.2f}% of nodes received VID failure information.")
-print(f"\tNodes receiving updated information: {effectedNodeCount}\n\tTotal nodes: {totalNodeCount}")
+logging.info("=== OVERHEAD ===")
+logging.info(f"{totalOverhead} bytes\n")
+
+logging.info("=== BLAST RADIUS ===")
+logging.info(f"{blastRadius:.2f}% of nodes received VID failure information.")
+logging.info(f"\tNodes receiving updated information: {effectedNodeCount}\n\tTotal nodes: {totalNodeCount}\n")
 
 # Default starting values for the timing range
 failureDetectionTimestamp = -1
@@ -164,5 +178,8 @@ for logFile in getResultsFile(CONVERGENCE_DIR):
             finalFailureRecoveryTimestamp = max(finalFailureRecoveryTimestamp, failureTimestamp)
 
 convergenceTime = finalFailureRecoveryTimestamp - failureDetectionTimestamp
-print(f"Final failure update time: {finalFailureRecoveryTimestamp}\nFailure Detection time: {failureDetectionTimestamp}")
-print(f"Convergence time: {convergenceTime} ms")
+
+# Print results
+logging.info("=== CONVERGENCE TIME ===")
+logging.info(f"Final failure update time: {finalFailureRecoveryTimestamp}\nFailure Detection time: {failureDetectionTimestamp}")
+logging.info(f"Convergence time: {convergenceTime} milliseconds")
