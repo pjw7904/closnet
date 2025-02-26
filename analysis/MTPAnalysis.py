@@ -9,6 +9,7 @@ NETWORK_NODE_PREFIXES = "T,S,L"
 COMPUTE_NODE_PREFIXES = "C"
 
 # Types values for failure actions
+CANNOT_DETERMINE_CONVERGENCE_TIME = -1
 FAILURE_DETECTION = 0
 FAILURE_UPDATE = 1
 
@@ -67,24 +68,38 @@ def getOverhead(logFile):
 
 
 def getNodeConvergenceTime(logFile):
+    """
+    Parse the log file to determine the node's convergence time.
+    """
+
+    # The detection pattern assumes the timestamp is the last group of digits in the line.
+    detection_pattern = re.compile(r"Detected a failure.*?(\d+)\s*$")
+
+    # The update pattern extracts a group of digits (which may have a trailing comma) after the message.
+    update_pattern = re.compile(r"FAILURE UPDATE message received.*?(\d+),?")
+
     with open(logFile) as f:
-        line = f.readline()
-    
-        while line:
-            token = line.split(" ")
-            
-            if "Detected a failure" in line:            
-                return FAILURE_DETECTION, int(token[len(token)-1])
-            
+        for line in f:
+            if "Detected a failure" in line:
+                match = detection_pattern.search(line)
+
+                if match:
+                    timestamp = int(match.group(1))
+
+                    if timestamp < testStopTime:
+                        return FAILURE_DETECTION, timestamp
+                    
             elif "FAILURE UPDATE message received" in line:
-                time = int(token[6].replace(",",""))
-    
-                if(time < testStopTime):
-                    return FAILURE_UPDATE, time
-            
-            line = f.readline()
-        
-    return -1,-1
+                match = update_pattern.search(line)
+                
+                if match:
+                    timestamp = int(match.group(1))
+
+                    if timestamp < testStopTime:
+                        return FAILURE_UPDATE, timestamp
+
+    return CANNOT_DETERMINE_CONVERGENCE_TIME, CANNOT_DETERMINE_CONVERGENCE_TIME
+
 
 
 # STEP 1: Parse and record timestamps for downtime (interface, network)
