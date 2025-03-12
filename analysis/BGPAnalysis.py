@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 # Topology and experiment information
-LOG_DIR_PATH = "/home/pjw7904/MTP-Mininet/logs/bgp/bgp_2_4_1-1_1741761296707"
+LOG_DIR_PATH = "/home/pjw7904/closnet/logs/bgp/bgp_2_4_1-1_1741761296707"
 DOWNTIME_DIR = "downtime"
 CONVERGENCE_DIR = "convergence"
 RESULTS_FILE = os.path.join(LOG_DIR_PATH, "results.log")
@@ -102,8 +102,9 @@ def parseBGPLogFile(nodeName, logFile, failureInfo):
     overhead = 0
     with open(logFile) as file:
         for line in file:
+            # This is the node that lost an interface, find the time of that interface failure
             if(failedNode and INTF_FAILURE_LOG in line):
-                intfDownTimestamp = getEpochTime(line[:23])
+                intfDownTimestamp = getEpochTime(line[:23]) # First 23 characters is the FRR log timestamp
 
                 if intfDownTimestamp < failureInfo["interface_failure_timestamp"]:
                     raise Exception(f"Log error: Failure detection timestamp {intfDownTimestamp} is before the interface failure time {failureInfo['interface_failure_timestamp']}.")
@@ -113,6 +114,7 @@ def parseBGPLogFile(nodeName, logFile, failureInfo):
                 else:
                     raise Exception(f"Log error: Failure detection timestamp {intfDownTimestamp} is after the experiment end time {failureInfo['experiment_stop_timestamp']}.")
 
+            # This is a node that received updated prefix information via BGP UPDATE messages, parse those messages.
             receivedBGPUpdate = re.search(RECV_UPDATE_PATTERN, line)
             if receivedBGPUpdate:
                 updateTimestamp = getEpochTime(line[:23])
@@ -179,7 +181,7 @@ def main():
     blastRadius = (updatedNodeCount/totalNodeCount) * 100
 
     print(f"\nDown/Start time: {startTime}")
-    print(f"Overhead: {totalOverhead}")
+    print(f"Overhead: {totalOverhead} bytes")
     print(f"\nBlast radius: {blastRadius:.2f}% of nodes received updated prefix information.")
     print(f"\tNodes receiving updated information: {updatedNodeCount}\n\tTotal nodes: {totalNodeCount}")
     print(f"Reconvergence time: {reconvergenceTime} milliseconds")
