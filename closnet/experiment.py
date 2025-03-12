@@ -86,6 +86,9 @@ def copyProtocolLogs(dirPath):
             destination_file = output_path / log_file.name
             shutil.copy(log_file, destination_file)
 
+            # Update permissions of copied log file
+            destination_file.chmod(0o644)
+
     return
 
 
