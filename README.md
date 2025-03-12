@@ -1,6 +1,6 @@
 # Closnet
 
-An automation framework to build an emulated version of a modern data center network for experimentation of network protocols. It is built as an extension of Mininet, a popular network emulator.
+A framework to build an emulated version of a modern data center network for experimentation of network protocols. It is built as an extension of Mininet, a popular network emulator.
 
 The topology built is a traditional folded-Clos with a 1:1 oversubscription ratio, resulting in a rearrangably nonblocking network (hence the name Closnet). Closnet is able to determine the appropriate configuration necessary for connecting nodes, which can then be used to build configuration files for network protocols that utilize the hierarchical folded-Clos system. The figure below illustrates a high-level overview of a folded-Clos data center nework:
 
@@ -34,11 +34,65 @@ Packages installed include:
 
 ## Usage
 
-Running Closnet requires information about the folded-Clos topology to be built and what protocol should be installed on the nodes. The command to start Closnet is as follows, where [protocol] and [options] are arguments to be added depending on the experiment to be run:
+Running Closnet requires information about the folded-Clos topology to be built and what protocol should be installed on the nodes. There are two ways of starting and using Closnet: **interactive mode** and **experiment mode**.
+
+### Running in Interactive Mode
+
+Interactive mode allows you to play with your protocol of choice in your defined folded-Clos topology. The Mininet console is provided in this mode, hence the name interactive mode. Nothing is saved by default, it is a means of observing network behaviors at your pace.
+
+The command to start Closnet in interactive mode is as follows, where [protocol] and [options] are arguments to be added depending on the experiment to be run:
 
 ```bash
 sudo python3 closnet [protocol] [options]
 ```
+
+[protocol] is the control protocol to be installed on the folded-Clos topology. The available protocols are described in the [protocol section](#protocols). This is a positional argument and must be the first argument as a result, prior to the other options.
+
+#### Options
+
+The folded-Clos topology configuration is describe in the options arguments.
+
+| Option      | Description |
+| ----------- | ----------- |
+| `-t numOfTiers` or `--tiers numOfTiers` | The number of tiers in the folded-Clos topology, excluding the compute tier 0. |
+| `-p numOfPorts` or `--ports numOfPorts` | The number of ports each switch has in the folded-Clos topology.|
+| `-s tier numOfSouthboundPorts` or `--southbound tier numOfSouthboundPorts` | The number of links to a tier below by specficing the tier and the number of southbound ports per switch. |
+
+### Running in Experiment Mode
+
+Experiment mode is an automated framework to test network reconvergence upon the failure of a network interface. The protocol and folded-Clos topology specifications are defined like in interactive mode, but the process of running the experiment and then collecting as well as analyzing results is automated. The Mininet is torn down once the experiment is over, it does not revert to interactive mode.
+
+Running Closnet in experiment mode is done through a JSON experiment setup file and then pointing to that file via the file CLI option.
+
+```bash
+sudo python3 closnet --file [experiment JSON file path]
+```
+
+#### Options
+
+The file containing topology specifications and experiment details is recongized via the file option.
+
+| Option      | Description |
+| ----------- | ----------- |
+| `-f experimentFile` or `--file experimentFile` | The file path to the experiment JSON file |
+
+#### Experiment Configuration File
+
+| JSON Key      | Type | Description |
+| ----------- | ------   | ----------- |
+| `protocol`  | string   | The protocol to install on the topology |
+| `tiers`     | integer  | The number of tiers in the folded-Clos topology, excluding the compute tier 0. |
+| `ports`     | integer  | The number of ports each switch has in the folded-Clos topology. |
+| `southbound`| 2D array | The number of links to a tier below by specficing the tier and the number of southbound ports per switch. Each tier configuration is its own array within the array (see example) |
+| `node_to_fail`| string  | The node that will have an interface failed. |
+| `neighbor_of_failing_node`| string  | The node connected to the node to fail. This determines which interface must be failed on the node. |
+| `log_dir_path`| string  | The path to the JSON experiment file |
+
+For example, consider a link in your topology that looks like this:
+
+**L_1[L_1-eth2]-------[T_1-eth1]T_1**
+
+where L_1 and T_1 are nodes in the topology, and [L_1-eth2] and [T_1-eth1] are the names of the interfaces connected to their respective node. If you wish to fail interface L_1-eth2, you would set `node_to_fail` as L_1 and `neighbor_of_failing_node` to T_1. Interface numbering is random, so this system allows for consistency in what interface is broken, regardless of the name of that interface.
 
 ### Protocols
 
@@ -53,22 +107,30 @@ Included with these protocols are appropriate Mako template files to assist in a
 
 If additional protocols are desired, you must add the necessary information to a new `closnet/switches` sub-directory, including a Mininet switch/node sub-class along with a Mako configuration template and the binary file if necessary. Finally, the new protocol must be recognized in the main function. Both the mtp and bgp sub-directories provide examples of how to add a protocol to Closnet.
 
-### Options
+### Example Topology Configuration
 
-The folded-Clos topology configuration is describe in the options arguments.
-
-| Option      | Description |
-| ----------- | ----------- |
-| `-t numOfTiers` or `--tiers numOfTiers` | The number of tiers in the folded-Clos topology, excluding the compute tier 0. |
-| `-p numOfPorts` or `--ports numOfPorts` | The number of ports each switch has in the folded-Clos topology.|
-| `-s SOUTHBOUND SOUTHBOUND` or `--southbound SOUTHBOUND SOUTHBOUND` | The number of links to a tier below by specficing the tier and the number of southbound ports per switch. |
-
-### Example
-
-Given the following Closnet command:
+Given the following Closnet command (interactive mode):
 
 ```bash
 sudo python3 closnet mtp -t 3 -p 4 -s 1 1
+```
+
+Or, the equivalent JSON experiment file (experiment mode):
+
+```json
+{
+    "protocol": "mtp",
+    "tiers": 3,
+    "ports": 4,
+    "southbound": [[1, 1]],
+    "node_to_fail": "L_1",
+    "neighbor_of_failing_node": "T_1",
+    "log_dir_path": "/home/user/closnet/logs"
+}
+```
+
+```bash
+sudo python3 closnet -f /path/to/json/file
 ```
 
 The following topology is built with each node running MTP:
