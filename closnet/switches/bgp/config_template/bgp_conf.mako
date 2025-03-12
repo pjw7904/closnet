@@ -6,8 +6,8 @@ log file /tmp/${node_name}.log
 log timestamp precision 3
 !
 debug bgp updates in
-debug bgp updates out
 debug bgp updates detail
+debug zebra events
 !
 router bgp ${bgp_asn}
  timers bgp 1 3
