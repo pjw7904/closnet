@@ -33,7 +33,7 @@ def failNetworkInterface(net, targetNode, neighborNode):
     intf_to_disable.ifconfig('down')
 
     # Return the status of the interface for confirmation and the time of failure
-    return not intf_to_disable.isUp(), timestamp
+    return not intf_to_disable.isUp(), timestamp, intf_to_disable.name
 
 
 def collectMTPNodeDowntimeLogs(dirPath):
@@ -92,7 +92,7 @@ def copyProtocolLogs(dirPath):
     return
 
 
-def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp, experimentStopTimestamp):
+def collectLogs(protocol, topologyName, logDirPath, intfFailureInfo, intfFailureTimestamp, experimentStopTimestamp):
     '''
     Copy protocol log files from a test into a directory to be analyzed.
     '''
@@ -114,12 +114,20 @@ def collectLogs(protocol, topologyName, logDirPath, intfFailureTimestamp, experi
     # Copy the protocol log files into the experiment directory
     copyProtocolLogs(convergence_dir.as_posix())
 
-    # Create the interface downtime log file and record the downtime inside of it
-    intf_down_file = downtime_dir / "intf_down.log"
-    intf_down_file.write_text(f"{intfFailureTimestamp}")
+    # Create a log file to record information associated with the interface failure
+    intf_down_file = downtime_dir / "failure.log"
+    
+    nodeFailed = intfFailureInfo[0]
+    neighborFailed = intfFailureInfo[1]
+    intfName = intfFailureInfo[2]
 
-    # Create the test downtime log file and record the experiment stop time
-    experiment_stop_file = downtime_dir / "experiment_stop.log"
-    experiment_stop_file.write_text(f"{experimentStopTimestamp}")
+    failureText = (
+        f"Failed node: {nodeFailed}\n"
+        f"Failed neighbor: {neighborFailed}\n"
+        f"Interface name: {intfName}\n"
+        f"Interface failure timestamp: {intfFailureTimestamp}\n"
+        f"Experiment stop timestamp: {experimentStopTimestamp}"
+    )
+    intf_down_file.write_text(failureText)
 
     return experiment_name
