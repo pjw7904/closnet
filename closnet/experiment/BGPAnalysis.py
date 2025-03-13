@@ -115,7 +115,7 @@ def parseBGPLogFile(nodeName, logFile, experiment: ExperimentAnalysis):
         for line in file:
             # If the log record is not within the experiment time frame, ignore it.
             recordTimestamp = experiment.getEpochTime(line[:23])
-            if(not experiment.isValidLogRecord(recordTimestamp)):
+            if(not experiment.isValidLogRecord(recordTimestamp, useExperimentStartTime=True)):
                 continue
 
             # Make sure that there aren't multiple interface failures within the experiment time range, unless it's the neighbor node
@@ -127,7 +127,7 @@ def parseBGPLogFile(nodeName, logFile, experiment: ExperimentAnalysis):
                     logging.debug(f"[{nodeName}] Failed interface timestamp: {intfDownTimestamp}")
                     logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
 
-                    if(experiment.isValidLogRecord(intfDownTimestamp) and experiment.isFailedNeighborInterface(intfName)):
+                    if(experiment.isValidLogRecord(intfDownTimestamp, useExperimentStartTime=True) and experiment.isFailedNeighborInterface(intfName)):
                         logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
                         continue
                     else:
@@ -212,5 +212,5 @@ def runBGPExperimentAnalysis(logDirPath, debugging=False):
 
 
 if __name__ == "__main__":
-    LOG_DIR = "/some/data/path"
-    runBGPExperimentAnalysis(LOG_DIR)
+    LOG_DIR = "/home/pjw7904/closnet/logs/bgp/bgp_2_4_1-1_1741887879430"
+    runBGPExperimentAnalysis(LOG_DIR, debugging=True)
