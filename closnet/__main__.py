@@ -52,7 +52,7 @@ def startExperimentMode(net, config, topologyName) -> None:
     info(f"\n*** Starting experiment mode:\n")
 
     # Give the topology time for initial convergence
-    timeToSleep = config.tiers * 3
+    timeToSleep = config.tiers * 4
     info(f"EXPERIMENT STEP 1: Giving the nodes {timeToSleep} seconds to get converged...\n")
 
     sleep(timeToSleep)
@@ -93,13 +93,9 @@ def startExperimentMode(net, config, topologyName) -> None:
     if(config.protocol == MTP):
         pass
     elif(config.protocol == BGP):
-        info("\tRunning BGP reconvergence analysis...\n")
-        runBGPExperimentAnalysis(experimentDirPath)
-        info("\t...Done!\n")
+        runBGPExperimentAnalysis(experimentDirPath, config.debugging)
     else:
         info("Unknown/no protocol chosen, ignore analysis")
-
-    info("Experiment complete.\n")
 
     return
 

@@ -32,7 +32,16 @@ class ExperimentAnalysis():
         self.reconvergence_time = 0
 
 
-    def getLogFile(self, directoryToParse):
+    def getLogFile(self, directoryToParse, node):
+        '''
+        Return the filepath for a node's log file.
+        '''
+
+        node += ".log"
+        return os.path.join(self.directory, directoryToParse, node)
+
+
+    def iterLogFiles(self, directoryToParse):
         '''
         Iterate through a directory and returns the file path
         as well as the name of the file without its extension.
@@ -91,6 +100,33 @@ class ExperimentAnalysis():
         '''
 
         return node == self.failed_node
+
+
+    def isFailedInterface(self, interface):
+        '''
+        Determine if the interface being failed
+        is the correct interface from the experiment
+        '''
+
+        return interface == self.failed_intf
+
+
+    def isFailedNeighbor(self, node):
+        '''
+        Determine if the log file being analyzed belongs
+        to the neighbor of the node where the interface 
+        failure occurred.
+        '''
+
+        return node == self.neighbor_node
+    
+    def isFailedNeighborInterface(self, interface):
+        '''
+        Determine if the interface being failed
+        is the correct neighbor interface from the experiment
+        '''
+
+        return interface == self.neighbor_intf
 
 
     def isValidLogRecord(self, timestamp, useExperimentStartTime=False):
