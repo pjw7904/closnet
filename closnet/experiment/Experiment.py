@@ -12,9 +12,10 @@ def recordSystemTime():
     return subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
 
 
-def failNetworkInterface(net, targetNode, neighborNode):
+def startReconvergenceExperiment(net, targetNode, neighborNode):
     '''
-    Fail an interface on a Mininet node connected to a specified neighbor.
+    Fail an interface on a Mininet node connected to a specified neighbor
+    to start the reconvergenec experiment.
     '''
 
     # Get the link between the two nodes
@@ -23,17 +24,19 @@ def failNetworkInterface(net, targetNode, neighborNode):
     # Find the right interface, it's an object within link, link.intf1 or link.intf2
     if link.intf1.node.name == targetNode:
         intf_to_disable = link.intf1
+        neighbor_intf = link.intf2
     else:
         intf_to_disable = link.intf2
+        neighbor_intf = link.intf1
 
-    # Record the time of failure
-    timestamp = recordSystemTime()
+    # Record the experiment start time
+    experimentStartTime = recordSystemTime()
 
-    # Disable the interface
+    # Disable the interface (the timestamp associated with this event will be logged by the protocol)
     intf_to_disable.ifconfig('down')
 
-    # Return the status of the interface for confirmation and the time of failure
-    return not intf_to_disable.isUp(), timestamp, intf_to_disable.name
+    # Return the status of the interface for confirmation and experiment information
+    return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name
 
 
 def collectMTPNodeDowntimeLogs(dirPath):
@@ -92,42 +95,44 @@ def copyProtocolLogs(dirPath):
     return
 
 
-def collectLogs(protocol, topologyName, logDirPath, intfFailureInfo, intfFailureTimestamp, experimentStopTimestamp):
+def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
     '''
     Copy protocol log files from a test into a directory to be analyzed.
     '''
 
+    # Information associated with the experiment run
+    nodeFailed = experimentInfo[0]
+    neighborFailed = experimentInfo[1]
+    intfName = experimentInfo[2]
+    neighborIntfName = experimentInfo[3]
+    experimentStartTime = experimentInfo[4]
+    experimentStopTime = experimentInfo[5]
+
     # Generate a name for the experiment instance that was run
-    experiment_name = f"{topologyName}_{intfFailureTimestamp}"
+    experiment_name = f"{topologyName}_{experimentStartTime}"
 
     # Create the experiment directory.
     log_dir_path = Path(logDirPath).resolve() / f"{protocol}" / experiment_name
     log_dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Define the two experiment-specific subdirectories
-    convergence_dir = log_dir_path / "convergence"
-    downtime_dir = log_dir_path / "downtime"
-
-    convergence_dir.mkdir(exist_ok=True)
-    downtime_dir.mkdir(exist_ok=True)
+    # Define the subdirectory for node log files
+    nodes_dir = log_dir_path / "nodes"
+    nodes_dir.mkdir(exist_ok=True)
 
     # Copy the protocol log files into the experiment directory
-    copyProtocolLogs(convergence_dir.as_posix())
+    copyProtocolLogs(nodes_dir.as_posix())
 
-    # Create a log file to record information associated with the interface failure
-    intf_down_file = downtime_dir / "failure.log"
-    
-    nodeFailed = intfFailureInfo[0]
-    neighborFailed = intfFailureInfo[1]
-    intfName = intfFailureInfo[2]
+    # Create a log file to record information associated with the experiment run
+    experiment_log_file = log_dir_path / "experiment.log"
 
     failureText = (
         f"Failed node: {nodeFailed}\n"
-        f"Failed neighbor: {neighborFailed}\n"
         f"Interface name: {intfName}\n"
-        f"Interface failure timestamp: {intfFailureTimestamp}\n"
-        f"Experiment stop timestamp: {experimentStopTimestamp}"
+        f"Failed neighbor: {neighborFailed}\n"
+        f"Neighbor interface name: {neighborIntfName}\n"
+        f"Experiment start time: {experimentStartTime}\n"
+        f"Experiment stop time: {experimentStopTime}"
     )
-    intf_down_file.write_text(failureText)
+    experiment_log_file.write_text(failureText)
 
-    return experiment_name
+    return str(log_dir_path)
