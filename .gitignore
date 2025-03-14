@@ -3,6 +3,7 @@
 
 ### MTP-Mininet ###
 closnet/switches/*/bin/*
+test.json
 
 # Leave two example clos topologies, one for MTP and one for BGP
 closnet/topologies/clos/*
