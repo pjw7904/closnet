@@ -36,8 +36,12 @@ TCP_HEADER_LEN = 20
 BGP_HEADER_LEN = 23 
    
 
-def writeResults(experiment: ExperimentAnalysis):
-    logging.info("=== EXPERIMENT TIMESTAMPS ===")
+def writeResults(experiment: ExperimentAnalysis) -> None:
+    '''
+    Write the results of the experiment analysis to a file.
+    '''
+    
+    logging.info("\n=== EXPERIMENT TIMESTAMPS ===")
     logging.info(f"Experiment start time: {experiment.start_time}\nInterface failure time: {experiment.intf_failure_time}\nExperiment stop timestamp: {experiment.stop_time}\n")
 
     logging.info("=== OVERHEAD ===")
@@ -54,12 +58,10 @@ def writeResults(experiment: ExperimentAnalysis):
     return
 
 
-def getFailedIntfInfo(line, experiment):
+def getFailedIntfName(line: str) -> str:
     '''
-    Parse the interface failure time and interface name for a failure log record.
+    Parse the interface name for a failure log record.
     '''
-
-    intfDownTimestamp = experiment.getEpochTime(line[:23]) # First 23 characters is the FRR log timestamp
 
     # Parse out the interface name for failure confirmation
     match = INTF_FAILURE_PATTERN.search(line)
@@ -69,47 +71,37 @@ def getFailedIntfInfo(line, experiment):
         # Handle the case where there is no match
         intfName = None
 
-    return intfName, intfDownTimestamp
+    return intfName
 
 
-def parseFailedNodeLogFile(nodeName, logFile, experiment: ExperimentAnalysis):
-    if(not experiment.isFailedNode(nodeName)):
-        raise Exception(f"Log error: Failed node is incorrect for analysis.")
+def parseFailureLogRecord(nodeName, intfName, recordTimestamp, experiment: ExperimentAnalysis) -> None:
+    # If the interface failure log came from the neighbor of the node that lost an interface.
+    if(experiment.isFailedNeighbor(nodeName)):
+        if(experiment.isFailedNeighborInterface(intfName)):
+            logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
+        else:
+            raise Exception("Log error: Multiple failures on failed neighbor, Please check logs.")
+
+    # If the interface failure log came from the node that lost an interface.
+    elif(experiment.isFailedNode(nodeName)):
+        if(experiment.isFailedInterface(intfName)):
+            experiment.intf_failure_time = recordTimestamp
+
+            logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
+        else:
+            raise Exception("Log error: Multiple failures on failed node, Please check logs.")
+
+    # If the interface failure log came from any other node, there was an issue with the experiment.
+    else:
+        raise Exception(f"Log error: Interface failure on node {nodeName}, Please check logs.")
     
-    foundIntfFailureLog = False
-
-    with open(logFile) as file:
-        for line in file:
-            # Validate and find the time of that interface failure (starts convergence timing)
-            if(INTF_FAILURE_LOG in line):
-                intfName, intfDownTimestamp = getFailedIntfInfo(line, experiment)
-
-                logging.debug(f"[{nodeName}] Failed interface detected: {line.rstrip()}")
-                logging.debug(f"[{nodeName}] Failed interface timestamp: {intfDownTimestamp}")
-                logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
-
-                if(experiment.isValidLogRecord(intfDownTimestamp, useExperimentStartTime=True) and experiment.isFailedInterface(intfName)):
-                    experiment.intf_failure_time = intfDownTimestamp
-                    foundIntfFailureLog = True
-
-                    logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
-                    logging.debug(f"[{nodeName}] Final values: convergence time = {intfDownTimestamp} | Overhead = N/A")
-                    
-                    return foundIntfFailureLog
-                     
-                else:
-                    raise Exception(f"Log error: Interface failure found on node {nodeName} is invalid. Please check the logs.")
-                
-    return foundIntfFailureLog
+    return
 
 
 def parseBGPLogFile(nodeName, logFile, experiment: ExperimentAnalysis):    
     convergenceTime = 0
     overhead = 0
-
-    # Determine if the node being analyzed is the node with the interface failure, or is the neighbor of that node on the failed link.
-    failedNode = True if experiment.isFailedNode(nodeName) else False
-    failedNeighbor = True if experiment.isFailedNeighbor(nodeName) else False
+    updated = False # Used for blast radius calculation. Nodes that are not updated are not part of the blast radius.
 
     with open(logFile) as file:
         for line in file:
@@ -118,46 +110,35 @@ def parseBGPLogFile(nodeName, logFile, experiment: ExperimentAnalysis):
             if(not experiment.isValidLogRecord(recordTimestamp, useExperimentStartTime=True)):
                 continue
 
-            # Make sure that there aren't multiple interface failures within the experiment time range, unless it's the neighbor node
+            # The only valid failures within the experiment time frame are the specified node and its neighbor
             if(INTF_FAILURE_LOG in line):
-                if(failedNeighbor):
-                    intfName, intfDownTimestamp = getFailedIntfInfo(line, experiment)
+                intfName = getFailedIntfName(line)
 
-                    logging.debug(f"[{nodeName}] Failed interface detected: {line.rstrip()}")
-                    logging.debug(f"[{nodeName}] Failed interface timestamp: {intfDownTimestamp}")
-                    logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
+                logging.debug(f"[{nodeName}] Failed interface detected: {line.rstrip()}")
+                logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
+                logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
 
-                    if(experiment.isValidLogRecord(intfDownTimestamp, useExperimentStartTime=True) and experiment.isFailedNeighborInterface(intfName)):
-                        logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
-                        continue
-                    else:
-                        raise Exception("Log error: Multiple failures on failed neighbor, Please check logs.")
+                parseFailureLogRecord(nodeName, intfName, recordTimestamp, experiment)
+                convergenceTime = max(convergenceTime, recordTimestamp)
+                updated = True
 
-                elif(failedNode):
-                    intfName, intfDownTimestamp = getFailedIntfInfo(line, experiment)
+            else:
+                # If the node received updated prefix information via a BGP UPDATE message, parse the message
+                receivedBGPUpdate = re.search(RECV_UPDATE_PATTERN, line)
+                if receivedBGPUpdate:
+                    wlen, attrlen, alen = map(int, receivedBGPUpdate.groups())
 
-                    if(intfDownTimestamp == experiment.intf_failure_time and experiment.isFailedInterface(intfName)):
-                        logging.debug(f"[{nodeName}] Found the correct interface failure log again, ignoring.")
-                        continue
-                    else:
-                        raise Exception("Log error: Multiple failures on failed node, Please check logs.")
-                else:
-                    raise Exception(f"Log error: Interface failure on node {nodeName}, Please check logs.")
+                    if(any(val > 0 for val in (wlen, attrlen, alen))):
+                        convergenceTime = max(convergenceTime, recordTimestamp)
+                        updated = True
+                        overhead += wlen + attrlen + alen + ETH_II_HEADER_LEN + IPV4_HEADER_LEN + TCP_HEADER_LEN + BGP_HEADER_LEN
 
-            # If the node received updated prefix information via a BGP UPDATE message, parse the message (consider for convergence timing)
-            receivedBGPUpdate = re.search(RECV_UPDATE_PATTERN, line)
-            if receivedBGPUpdate:
-                wlen, attrlen, alen = map(int, receivedBGPUpdate.groups())
+                        logging.debug(f"[{nodeName}] BGP UPDATE detected: {line.rstrip()}")
+                        logging.debug(f"[{nodeName}] UPDATE timestamp: {recordTimestamp}")
 
-                if(any(val > 0 for val in (wlen, attrlen, alen))):
-                    convergenceTime = max(convergenceTime, recordTimestamp)
-                    overhead += wlen + attrlen + alen + ETH_II_HEADER_LEN + IPV4_HEADER_LEN + TCP_HEADER_LEN + BGP_HEADER_LEN
+    logging.debug(f"[{nodeName}] Final values: Convergence Time = {convergenceTime} | Updated = {updated} | Overhead = {overhead}")
 
-                    logging.debug(f"[{nodeName}] BGP UPDATE detected: {line.rstrip()}")
-                    logging.debug(f"[{nodeName}] UPDATE timestamp: {recordTimestamp}")
-
-    logging.debug(f"[{nodeName}] Final values: Convergence Time = {convergenceTime} | Overhead = {overhead}")
-    return convergenceTime, overhead
+    return convergenceTime, updated, overhead
 
 
 def runBGPExperimentAnalysis(logDirPath, debugging=False):
@@ -176,41 +157,29 @@ def runBGPExperimentAnalysis(logDirPath, debugging=False):
 
     logging.debug("=== DEBUGGING ===")
 
-    # Read through the failed node's log first to get a time for the start of the reconvergence process.
-    logging.debug(f"\n*** Analyzing {experiment.failed_node} log file for interface failure detection ***")
-    failedNodeLogFilePath = experiment.getLogFile(NODE_LOGS_DIR, experiment.failed_node)
-    foundIntfFailureLog = parseFailedNodeLogFile(experiment.failed_node, failedNodeLogFilePath, experiment)
-
-    if(not foundIntfFailureLog):
-        raise Exception("Log error: Failed node's interface failure log cannot be located. Please check logs.")
-
-    # Mark that node as updated
-    experiment.number_of_nodes += 1
-    experiment.number_of_updated_nodes += 1
-
     # Then, read through all of the nodes log files to see the reconvergence process (including the failed node as well)
     for logFile, nodeName in experiment.iterLogFiles(NODE_LOGS_DIR):
         logging.debug(f"\n*** Analyzing {nodeName} log file ({logFile}) ***")
 
         # Through the log records for this node, determine what its total message overhead is and the time of its final update
-        nodeConvergenceTime, nodeOverhead = parseBGPLogFile(nodeName, logFile, experiment)
+        nodeConvergenceTime, nodeWasUpdated, nodeOverhead = parseBGPLogFile(nodeName, logFile, experiment)
 
-        # Add the node results to the appropriate metric collection structures
+        # Update CONVERGENCE TIME metric data
         experiment.convergence_times.append(nodeConvergenceTime)
-        experiment.overhead += nodeOverhead
 
-        # If the node received one or more BGP UPDATE messages, it is part of the reconvergence blast radius. 
-        if(nodeOverhead > 0):
+        # Update BLAST RADIUS metric data
+        experiment.number_of_nodes += 1
+        if(nodeWasUpdated):
             experiment.number_of_updated_nodes += 1
 
-        # Don't double-count the failed node
-        if not experiment.isFailedNode(nodeName):
-            experiment.number_of_nodes += 1
+        # Update OVERHEAD metric data
+        experiment.overhead += nodeOverhead
 
     # Write the analysis results to the results log file
     writeResults(experiment)
 
 
 if __name__ == "__main__":
+    # For further debugging. To run as a stand-alone script, remove the period (.) from the ExperimentAnalysis import statement
     LOG_DIR = "/home/pjw7904/closnet/logs/bgp/bgp_2_4_1-1_1741887879430"
     runBGPExperimentAnalysis(LOG_DIR, debugging=True)
