@@ -2,7 +2,6 @@
 import os
 import re
 import logging
-from datetime import datetime
 
 # Custom libraries
 from .ExperimentAnalysis import ExperimentAnalysis
