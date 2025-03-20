@@ -14,17 +14,18 @@ from mininet.log import setLogLevel, info
 from mininet.clean import cleanup
 
 # Custom libraries
-from generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
-from generators.ClosConfigTopo import ClosConfigTopo
+from closnet.generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
+from closnet.generators.ClosConfigTopo import ClosConfigTopo
 
-from switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
-from switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
+from closnet.switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
 
-from experiment.Experiment import *
-from experiment.BGPAnalysis import runBGPExperimentAnalysis
+from closnet.switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
+from closnet.switches.bgp.analysis.BGPAnalysis import BGPAnalysis
 
-from ConfigParser import *
-from NodeConfigGenerator import *
+from closnet.experiment.Experiment import *
+
+from closnet.ConfigParser import *
+from closnet.NodeConfigGenerator import *
 
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
@@ -93,7 +94,8 @@ def startExperimentMode(net, config, topologyName) -> None:
     if(config.protocol == MTP):
         pass
     elif(config.protocol == BGP):
-        runBGPExperimentAnalysis(experimentDirPath, config.debugging)
+        experiment = BGPAnalysis(experimentDirPath)
+        runExperimentAnalysis(experimentDirPath, experiment, config.debugging)
     else:
         info("Unknown/no protocol chosen, ignore analysis")
 

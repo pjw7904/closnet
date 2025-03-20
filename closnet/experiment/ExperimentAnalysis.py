@@ -1,35 +1,49 @@
+# Core libraries
 import os
-from datetime import datetime
+from abc import ABC, abstractmethod
 
 
-class ExperimentAnalysis():
-    def __init__(self, experimentDirPath, experimentLogFile):
+class ExperimentAnalysis(ABC):
+    EXPERIMENT_LOG_FILE = "experiment.log"
+
+    def __init__(self, experimentDirPath):
         if not os.path.exists(experimentDirPath):
             raise FileNotFoundError("Experiment directory does not exist.")
 
         # Logging information
         self.directory = experimentDirPath
-        self.experiment_log = experimentLogFile
         self.timestamp_format = None
 
         # Experiment information
         self.start_time = 0
         self.stop_time = 0
         self.intf_failure_time = 0
+
         self.failed_node = None
         self.neighbor_node = None
+
         self.failed_intf = None
         self.neighbor_intf = None
+
         self.number_of_nodes = 0
         self.number_of_updated_nodes = 0
         self.convergence_times = []
 
-        self.getExperimentInfo(os.path.join(experimentDirPath, experimentLogFile))
+        self.getExperimentInfo(os.path.join(experimentDirPath, self.EXPERIMENT_LOG_FILE))
 
         # Metrics
         self.overhead = 0
         self.blast_radius = 0.0
         self.reconvergence_time = 0
+
+
+    @abstractmethod
+    def parseLogFile(self, nodeName, logFile):
+        '''
+        Parse the records of a node's protocol log file to calculate results.
+        '''
+        
+        pass
 
 
     def getLogFile(self, directoryToParse, node):
@@ -140,19 +154,6 @@ class ExperimentAnalysis():
             return timestamp > self.start_time and timestamp < self.stop_time
         else:
             return timestamp > self.intf_failure_time and timestamp < self.stop_time
-
-
-    def getEpochTime(self, timestamp):
-        '''
-        Return a epoch timestamp based on the original timestamp.
-        '''
-
-        if self.timestamp_format is None:
-            raise Exception("No timestamp format set, cannot convert to epoch time format")
-
-        datetimeFormat = datetime.strptime(timestamp, self.timestamp_format)
-        
-        return int(datetime.timestamp(datetimeFormat) * 1000) # Reduce precision by moving milliseconds into main timestamp.
 
 
     def getReconvergenceTime(self):
