@@ -17,10 +17,10 @@ from mininet.clean import cleanup
 from closnet.generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
 from closnet.generators.ClosConfigTopo import ClosConfigTopo
 
-from closnet.switches.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
+from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
 
-from closnet.switches.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
-from closnet.switches.bgp.analysis.BGPAnalysis import BGPAnalysis
+from closnet.protocols.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
+from closnet.protocols.bgp.analysis.BGPAnalysis import BGPAnalysis
 
 from closnet.experiment.Experiment import *
 

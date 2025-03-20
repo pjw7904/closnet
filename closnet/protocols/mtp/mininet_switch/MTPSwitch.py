@@ -18,7 +18,7 @@ class MTPSwitch(Node):
             # Start the process (look into popen() function of node)
             # Start the C program in the background
             self.process = subprocess.Popen(
-                ['./closnet/switches/mtp/bin/mtp', self.name, "/tmp"],
+                ['./closnet/protocols/mtp/bin/mtp', self.name, "/tmp"],
                 stdout=log_file,
                 stderr=subprocess.STDOUT)
         

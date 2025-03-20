@@ -1,7 +1,7 @@
 '''
 author: Peter Willis (pjw7904@rit.edu)
 
-Testing out the custom topology and switch (found in switches --> test).
+Testing out the custom topology and switch (found in protocols --> test).
 '''
 
 # Mininet libraries
@@ -10,8 +10,8 @@ from mininet.log import setLogLevel
 from mininet.cli import CLI
 
 # Custom libraries
-from ..switches.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
-from ..generators.GraphmlTopo import GraphmlTopo
+from closnet.protocols.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
+from closnet.generators.GraphmlTopo import GraphmlTopo
 
 def logTest():
     '''

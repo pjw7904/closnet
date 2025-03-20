@@ -57,11 +57,11 @@ echo "Installing C development tools..."
 apt install -y build-essential autoconf automake libtool bison flex gdb cmake pkg-config libpcap-dev
 
 # Create a directory for the MTP binary
-mkdir closnet/switches/mtp/bin
+mkdir closnet/protocols/mtp/bin
 
 # Compile MTP source files
-MTP_SRC_DIR="closnet/switches/mtp/src"
-MTP_BIN="closnet/switches/mtp/bin/mtp"
+MTP_SRC_DIR="closnet/protocols/mtp/src"
+MTP_BIN="closnet/protocols/mtp/bin/mtp"
 
 if [ -d "$MTP_SRC_DIR" ]; then
     echo "Compiling MTP source files..."

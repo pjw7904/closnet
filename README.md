@@ -105,7 +105,7 @@ By default, Closnet includes two data center protocols to test.
 
 Included with these protocols are appropriate Mako template files to assist in automating the creation of configuration files for each node in the folded-Clos topology.
 
-If additional protocols are desired, you must add the necessary information to a new `closnet/switches` sub-directory, including a Mininet switch/node sub-class along with a Mako configuration template and the binary file if necessary. Finally, the new protocol must be recognized in the main function. Both the mtp and bgp sub-directories provide examples of how to add a protocol to Closnet.
+If additional protocols are desired, you must add the necessary information to a new `closnet/protocols` sub-directory, including a Mininet switch/node sub-class along with a Mako configuration template and the binary file if necessary. Finally, the new protocol must be recognized in the main function. Both the mtp and bgp sub-directories provide examples of how to add a protocol to Closnet.
 
 ### Example Topology Configuration
 
