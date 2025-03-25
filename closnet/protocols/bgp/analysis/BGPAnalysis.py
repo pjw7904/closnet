@@ -10,11 +10,11 @@ from closnet.experiment.ExperimentAnalysis import ExperimentAnalysis
 class BGPAnalysis(ExperimentAnalysis):
     # Timestamp information (Example timestamp in this format: 2024/04/30 04:09:33.947)
     TIMESTAMP_FORMAT = "%Y/%m/%d %H:%M:%S.%f"
+    TIMESTAMP_LENGTH = 23
 
     # Patterns to match in log file records
     INTF_FAILURE_PATTERN = re.compile(r"ZEBRA_INTERFACE_DOWN\s+(\S+)\s+vrf")
     RECV_UPDATE_PATTERN = re.compile(r'rcvd\s+UPDATE.*wlen\s+(\d+)\s+attrlen\s+(\d+)\s+alen\s+(\d+)')
-    INTF_FAILURE_LOG = "[SBFM4-2P25V] MESSAGE: ZEBRA_INTERFACE_DOWN" 
 
     # Message header sizes
     '''
@@ -51,22 +51,6 @@ class BGPAnalysis(ExperimentAnalysis):
         return int(datetime.timestamp(datetimeFormat) * 1000) # Reduce precision by moving milliseconds into main timestamp.
     
 
-    def getFailedIntfName(self, line: str) -> str:
-        '''
-        Parse the interface name for a failure log record.
-        '''
-
-        # Parse out the interface name for failure confirmation
-        match = self.INTF_FAILURE_PATTERN.search(line)
-        if match:
-            intfName = match.group(1)
-        else:
-            # Handle the case where there is no match
-            intfName = None
-
-        return intfName
-
-
     def parseFailureLogRecord(self, nodeName, intfName, recordTimestamp) -> None:
         # If the interface failure log came from the neighbor of the node that lost an interface.
         if(self.isFailedNeighbor(nodeName)):
@@ -97,37 +81,50 @@ class BGPAnalysis(ExperimentAnalysis):
         updated = False # Used for blast radius calculation. Nodes that are not updated are not part of the blast radius.
 
         with open(logFile) as file:
+            # Iterate over every record in the node's log file
             for line in file:
-                # If the log record is not within the experiment time frame, ignore it.
-                recordTimestamp = self.getEpochTime(line[:23])
-                if(not self.isValidLogRecord(recordTimestamp, useExperimentStartTime=True)):
-                    continue
+                # Convert the timestamp into Epoch formatting
+                recordTimestamp = self.getEpochTime(line[:self.TIMESTAMP_LENGTH])
 
-                # The only valid failures within the experiment time frame are the specified node and its neighbor
-                if(self.INTF_FAILURE_LOG in line):
-                    intfName = self.getFailedIntfName(line)
+                # Check to see if the log record describes an interface failure
+                interfaceFailure = self.INTF_FAILURE_PATTERN.search(line)
+                if interfaceFailure:
+                    # If the failure occurred prior to the start of the test, it was a failed test
+                    if recordTimestamp < self.start_time:
+                        raise Exception(f"[{nodeName}] Interface failure at {recordTimestamp} is earlier than experiment start at {self.start_time}!")
+
+                    # If the failure occurred after the end of the test, it doesn't matter (and is common when tearing down the topology)
+                    if recordTimestamp > self.stop_time:
+                        continue
+
+                    # Grab failed interface's name
+                    intfName = interfaceFailure.group(1)
 
                     logging.debug(f"[{nodeName}] Failed interface detected: {line.rstrip()}")
                     logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
                     logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
 
+                    # The only valid failures within the experiment time frame are the specified node and its neighbor
                     self.parseFailureLogRecord(nodeName, intfName, recordTimestamp)
                     convergenceTime = max(convergenceTime, recordTimestamp)
                     updated = True
 
-                else:
-                    # If the node received updated prefix information via a BGP UPDATE message, parse the message
-                    receivedBGPUpdate = re.search(self.RECV_UPDATE_PATTERN, line)
-                    if receivedBGPUpdate:
-                        wlen, attrlen, alen = map(int, receivedBGPUpdate.groups())
+                # For all other record types, ignore if its not within the experiment time frame.
+                if(not self.isValidLogRecord(recordTimestamp, useExperimentStartTime=True)):
+                    continue
 
-                        if(any(val > 0 for val in (wlen, attrlen, alen))):
-                            convergenceTime = max(convergenceTime, recordTimestamp)
-                            updated = True
-                            overhead += wlen + attrlen + alen + self.ETH_II_HEADER_LEN + self.IPV4_HEADER_LEN + self.TCP_HEADER_LEN + self.BGP_HEADER_LEN
+                # If the node received updated prefix information via a BGP UPDATE message, parse the message
+                receivedBGPUpdate = self.RECV_UPDATE_PATTERN.search(line)
+                if receivedBGPUpdate:
+                    wlen, attrlen, alen = map(int, receivedBGPUpdate.groups())
 
-                            logging.debug(f"[{nodeName}] BGP UPDATE detected: {line.rstrip()}")
-                            logging.debug(f"[{nodeName}] UPDATE timestamp: {recordTimestamp}")
+                    if(any(val > 0 for val in (wlen, attrlen, alen))):
+                        convergenceTime = max(convergenceTime, recordTimestamp)
+                        updated = True
+                        overhead += wlen + attrlen + alen + self.ETH_II_HEADER_LEN + self.IPV4_HEADER_LEN + self.TCP_HEADER_LEN + self.BGP_HEADER_LEN
+
+                        logging.debug(f"[{nodeName}] BGP UPDATE detected: {line.rstrip()}")
+                        logging.debug(f"[{nodeName}] UPDATE timestamp: {recordTimestamp}")
 
         logging.debug(f"[{nodeName}] Final values: Convergence Time = {convergenceTime} | Updated = {updated} | Overhead = {overhead}")
 
