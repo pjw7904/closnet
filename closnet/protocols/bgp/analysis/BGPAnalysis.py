@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 # Custom libraries
-from ....experiment.ExperimentAnalysis import ExperimentAnalysis
+from closnet.experiment.ExperimentAnalysis import ExperimentAnalysis
 
 
 class BGPAnalysis(ExperimentAnalysis):

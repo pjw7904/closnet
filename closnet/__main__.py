@@ -18,6 +18,7 @@ from closnet.generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNCon
 from closnet.generators.ClosConfigTopo import ClosConfigTopo
 
 from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
+from closnet.protocols.mtp.analysis.MTPAnalysis import MTPAnalysis
 
 from closnet.protocols.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
 from closnet.protocols.bgp.analysis.BGPAnalysis import BGPAnalysis
@@ -92,12 +93,13 @@ def startExperimentMode(net, config, topologyName) -> None:
     info("EXPERIMENT STEP 6: Run experiment analysis and record results.\n")
 
     if(config.protocol == MTP):
-        pass
+        experiment = MTPAnalysis(experimentDirPath)
     elif(config.protocol == BGP):
         experiment = BGPAnalysis(experimentDirPath)
-        runExperimentAnalysis(experimentDirPath, experiment, config.debugging)
     else:
-        info("Unknown/no protocol chosen, ignore analysis")
+        raise Exception("Unknown/no protocol chosen, experiment cannot be analyzed")
+
+    runExperimentAnalysis(experimentDirPath, experiment, config.debugging)
 
     return
 
