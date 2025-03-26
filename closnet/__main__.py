@@ -14,23 +14,24 @@ from mininet.log import setLogLevel, info
 from mininet.clean import cleanup
 
 # Custom libraries
-from closnet.generators.ClosGenerator import ClosGenerator, MTPConfig, BGPDCNConfig
-from closnet.generators.ClosConfigTopo import ClosConfigTopo
-
-from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
-from closnet.protocols.mtp.analysis.MTPAnalysis import MTPAnalysis
-
-from closnet.protocols.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
-from closnet.protocols.bgp.analysis.BGPAnalysis import BGPAnalysis
-
+from closnet.ClosGenerator import ClosGenerator
+from closnet.topo_definitions.ClosConfigTopo import ClosConfigTopo
 from closnet.experiment.Experiment import *
-
 from closnet.ConfigParser import *
 from closnet.NodeConfigGenerator import *
 
+## Meshed Tree Protocol (MTP) modules
+from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
+from closnet.protocols.mtp.config.MTPClosConfig import MTPClosConfig
+from closnet.protocols.mtp.analysis.MTPAnalysis import MTPAnalysis
+
+## Border Gateway Protocol (BGP) modules
+from closnet.protocols.bgp.mininet_switch.BGPSwitch import BGPSwitch, BGPHost
+from closnet.protocols.bgp.config.BGPClosConfig import BGPClosConfig
+from closnet.protocols.bgp.analysis.BGPAnalysis import BGPAnalysis
+
 # Constants
 CLOS_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/clos")
-GRAPHML_TOPOS_DIR = os.path.join(os.path.dirname(__file__), "topologies/graphml")
 MTP = "mtp"
 BGP = "bgp"
 
@@ -195,11 +196,11 @@ def main():
     # If this topology does not already have pre-computed configuration, build it.
     if(not topology):
         if(config.protocol == MTP):
-            topology = generateTopology(MTPConfig,
+            topology = generateTopology(MTPClosConfig,
                                         config, topologyName, portDensityModifications)
 
         elif(config.protocol == BGP):
-            topology = generateTopology(BGPDCNConfig,
+            topology = generateTopology(BGPClosConfig,
                                         config, topologyName, portDensityModifications)
         else:
             print("Protocol chosen unknown.")

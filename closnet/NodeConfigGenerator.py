@@ -18,7 +18,7 @@ def generateConfigMTP(topology):
     '''
 
     TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
-                                     "protocols/mtp/config_template/mtp_conf.mako")
+                                     "protocols/mtp/config/mtp_conf.mako")
 
     # Open the MTP configuration template
     try: 
@@ -54,7 +54,7 @@ def generateConfigBGP(topology):
     '''
 
     TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
-                                     "protocols/bgp/config_template/bgp_conf.mako")
+                                     "protocols/bgp/config/bgp_conf.mako")
 
     # Open the BGP configuration template
     try: 

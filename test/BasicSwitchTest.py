@@ -11,7 +11,7 @@ from mininet.cli import CLI
 
 # Custom libraries
 from closnet.protocols.test.mininet_switch.BasicCustomSwitch import TestSwitch, CCodeSwitch
-from closnet.generators.GraphmlTopo import GraphmlTopo
+from closnet.topo_definitions.GraphmlTopo import GraphmlTopo
 
 def logTest():
     '''
