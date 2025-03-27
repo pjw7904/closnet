@@ -52,6 +52,9 @@ def parseArgs() -> argparse.Namespace:
                             nargs=2, action='append', type=int, 
                             help='The number of links to a tier below by specficing the tier and the number of southbound ports per switch.')
 
+    # Additional utilities/features configuration
+    argParser.add_argument('--visualize', action='store_true')
+    
     # If a JSON config was passed in via the preliminary parse, load it and set those values as defaults.
     if prelimArgs.file:
         try:

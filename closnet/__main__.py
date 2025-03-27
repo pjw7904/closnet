@@ -19,6 +19,7 @@ from closnet.topo_definitions.ClosConfigTopo import ClosConfigTopo
 from closnet.experiment.Experiment import *
 from closnet.ConfigParser import *
 from closnet.NodeConfigGenerator import *
+from closnet.utils.DrawClos import drawFoldedClos
 
 ## Meshed Tree Protocol (MTP) modules
 from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
@@ -207,6 +208,13 @@ def main():
             stopNetAndCleanup()
     else:
         print("topology exists!")
+
+
+    # If the topology configuration was built, but you only want a figure of the topology, exit here.
+    if(config.visualize):
+        info("No Mininet built, JSON topology file saved and figure should appear.\n")
+        drawFoldedClos(topology)
+        stopNetAndCleanup()
 
     # Generate the configuration files for each node in the topology.
     if(config.protocol == MTP):
