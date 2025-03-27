@@ -43,7 +43,7 @@ Interactive mode allows you to play with your protocol of choice in your defined
 The command to start Closnet in interactive mode is as follows, where [protocol] and [options] are arguments to be added depending on the experiment to be run:
 
 ```bash
-sudo python3 closnet [protocol] [options]
+sudo python3 -m closnet [protocol] [options]
 ```
 
 [protocol] is the control protocol to be installed on the folded-Clos topology. The available protocols are described in the [protocol section](#protocols). This is a positional argument and must be the first argument as a result, prior to the other options.
@@ -57,6 +57,7 @@ The folded-Clos topology configuration is describe in the options arguments.
 | `-t numOfTiers` or `--tiers numOfTiers` | The number of tiers in the folded-Clos topology, excluding the compute tier 0. |
 | `-p numOfPorts` or `--ports numOfPorts` | The number of ports each switch has in the folded-Clos topology.|
 | `-s tier numOfSouthboundPorts` or `--southbound tier numOfSouthboundPorts` | The number of links to a tier below by specficing the tier and the number of southbound ports per switch. |
+| `--visualize` | A figure of the topology is generated and presented. A network is not started with this option.
 
 ### Running in Experiment Mode
 
@@ -65,7 +66,7 @@ Experiment mode is an automated framework to test network reconvergence upon the
 Running Closnet in experiment mode is done through a JSON experiment setup file and then pointing to that file via the file CLI option.
 
 ```bash
-sudo python3 closnet --file [experiment JSON file path]
+sudo python3 -m closnet --file [experiment JSON file path]
 ```
 
 #### Options
@@ -87,12 +88,46 @@ The file containing topology specifications and experiment details is recongized
 | `node_to_fail`| string  | The node that will have an interface failed. |
 | `neighbor_of_failing_node`| string  | The node connected to the node to fail. This determines which interface must be failed on the node. |
 | `log_dir_path`| string  | The path to the JSON experiment file |
+| `debugging` | boolean | When analyzing the experiment data, additional output is added to the results file to show how each metric result is determined node-by-node. |
 
 For example, consider a link in your topology that looks like this:
 
 **L_1[L_1-eth2]-------[T_1-eth1]T_1**
 
 where L_1 and T_1 are nodes in the topology, and [L_1-eth2] and [T_1-eth1] are the names of the interfaces connected to their respective node. If you wish to fail interface L_1-eth2, you would set `node_to_fail` as L_1 and `neighbor_of_failing_node` to T_1. Interface numbering is random, so this system allows for consistency in what interface is broken, regardless of the name of that interface.
+
+#### Framework
+Three metrics are used to analyze the behavior of the protocols installed on the folded-Clos topology:
+
+| Metric      | Description |
+| ----------- | ----------- |
+| Convergence Time | The amount of time it took for nodes to reconvergence upon the failure of the interface. *(How long recovery took)* |
+| Blast Radius | The number of nodes in the topology that received a message updating them about the changes in the topology. A node is counted in the blast radius regardless if a change is made to the node's state, as it was required to parse the message to make that determination. *(How many nodes were notified of a change)*|
+| Overhead | The total number of bytes that make up all protocol update messages that were sent/received. *(How much data was required to notify nodes)* | 
+
+A experiment follows the following steps:
+
+1. Define the topology and the interface that must be broken.
+
+2. Start the topology and give it a preset number of seconds (number of tiers * 4) to allow for the control protocol to convergence.
+
+3. Record an experiment start time
+
+4. Disable the specified interface (ifdown command) and validate it is down.
+
+5. Pause for the same amount of time defined in step 2 and allow the protocol to detect the failure as well as reconverge the topology.
+
+5. Record an experiment stop time
+
+6. Tear down the topology
+
+7. Collect the protocol log from each node
+
+8. Analyze the collected logs to determine results.
+
+9. Write results and experiment info to their respective log files.
+
+Each experiment is recorded in a directory with the same name as the topology (protocol + Clos description) along with an Epoch timestamp with the experiment start time. The directory will contain a `nodes` subdirectory that contains all of the protocol log files from the switches. Furthermore, the directory will contain an `experiment.log` file that describes when the experiment started and stopped as well as what interface was broken, and a `results.log` file that contains results for the three metrics. Debugging data will be in the results file if specified as well.
 
 ### Protocols
 
@@ -112,7 +147,7 @@ If additional protocols are desired, you must add the necessary information to a
 Given the following Closnet command (interactive mode):
 
 ```bash
-sudo python3 closnet mtp -t 3 -p 4 -s 1 1
+sudo python3 -m closnet mtp -t 3 -p 4 -s 1 1
 ```
 
 Or, the equivalent JSON experiment file (experiment mode):
@@ -130,7 +165,7 @@ Or, the equivalent JSON experiment file (experiment mode):
 ```
 
 ```bash
-sudo python3 closnet -f /path/to/json/file
+sudo python3 -m closnet -f /path/to/json/file
 ```
 
 The following topology is built with each node running MTP:
