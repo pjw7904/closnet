@@ -129,7 +129,7 @@ class ClosGenerator:
         :returns: The new prefix.
         """
 
-        return prefix + "-" + addition
+        return prefix + "_" + addition
 
     def determinePrefixVisitedStatus(self, prefix, prefixList):
         """
