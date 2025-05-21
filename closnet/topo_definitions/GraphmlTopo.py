@@ -40,7 +40,7 @@ class GraphmlTopo(Topo):
 
         # If the node is a switch, add as a Mininet Switch on the network
         else:
-            node = self.addSwitch(nodeName)
+            node = self.addNode(nodeName)
 
         return node
 
