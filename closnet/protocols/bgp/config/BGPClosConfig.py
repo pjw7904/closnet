@@ -64,9 +64,9 @@ class BGPClosConfig(ClosGenerator):
         title = self.getNodeTitle(currentTier, topTier)
 
         if(currentTier == topTier):
-            partialName = title + "_"
+            partialName = title
         else:
-            partialName = title + prefix + "_"
+            partialName = title + prefix
 
         # Add the unique number given to this node in the pod.
         name = partialName + nodeNum

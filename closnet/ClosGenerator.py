@@ -110,10 +110,8 @@ class ClosGenerator:
 
         name = self.getNodeTitle(currentTier, topTier)
 
-        if(currentTier == topTier):
-            name += "_"
-        else:
-            name += prefix + "_"
+        if(currentTier != topTier):
+            name += prefix
 
         name += nodeNum
 
@@ -129,7 +127,7 @@ class ClosGenerator:
         :returns: The new prefix.
         """
 
-        return prefix + "_" + addition
+        return prefix + addition
 
     def determinePrefixVisitedStatus(self, prefix, prefixList):
         """
