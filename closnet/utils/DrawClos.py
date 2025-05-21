@@ -38,10 +38,12 @@ def drawFoldedClos(topology: nx.graph) -> None:
         x_step = 4.0
         x_start = -(len(nodes_at_tier) - 1) * x_step / 2.0
 
+        print(f"TIER {t}")
         for i, node in enumerate(sorted(nodes_at_tier)):
             x_coord = x_start + i * x_step
             y_coord = t * y_step
             pos[node] = (x_coord, y_coord)
+            print(f"\t{node}")
 
     # Draw the topology
     plt.figure(figsize=(12, 8))
