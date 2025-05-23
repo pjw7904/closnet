@@ -62,8 +62,18 @@ def startExperimentMode(net, config, topologyName) -> None:
     sleep(timeToSleep)
 
     # Start the reconvergence experiment by failing the specified interface and confirm the operation was successful
-    intf_is_down, experimentStartTime, intfName, neighborIntfName = startReconvergenceExperiment(net, config.node_to_fail, config.neighbor_of_failing_node)
-    
+    (
+        intf_is_down,
+        experimentStartTime,
+        intfName,
+        neighborIntfName,
+        trafficStreams,
+    ) = startReconvergenceExperiment(
+        net,
+        config.node_to_fail, config.neighbor_of_failing_node,
+        config.traffic,
+    )
+
     if(not intf_is_down):
         info(f"EXPERIMENT STEP 2: Interface failure was not successful.\n")
 
@@ -80,6 +90,15 @@ def startExperimentMode(net, config, topologyName) -> None:
     info(f"EXPERIMENT STEP 4: Experiment is complete, tearing down topology. \n")
 
     experimentStopTime = recordSystemTime()
+
+    trafficInExperiment = False
+    for trafficStream in trafficStreams:
+        senderProcess = trafficStream[0]
+        receiverProcess = trafficStream[1]
+        info(f"Stopping traffic stream {trafficStream}...")
+        stopTraffic(senderProcess, receiverProcess)
+        trafficInExperiment = True
+    
     net.stop()
 
     # Collect log files generated
@@ -87,7 +106,7 @@ def startExperimentMode(net, config, topologyName) -> None:
 
     experimentInfo = (config.node_to_fail, config.neighbor_of_failing_node, 
                         intfName, neighborIntfName, 
-                        experimentStartTime, experimentStopTime)
+                        experimentStartTime, experimentStopTime, trafficInExperiment)
     experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, experimentInfo)
     
     info(f"\tExperiment directory: {experimentDirPath}\n")

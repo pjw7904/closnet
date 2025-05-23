@@ -3,11 +3,19 @@ import subprocess
 import shutil
 import logging
 import os
+import signal
 from pathlib import Path
-
+from time import sleep
 
 # Custom libraries
 from closnet.experiment.ExperimentAnalysis import ExperimentAnalysis
+from closnet.TrafficGenerator import analyzeTraffic
+
+# Constants
+TRAFFIC_GEN = os.path.join(os.path.dirname(__file__), "..", "TrafficGenerator.py")
+NUM_TEST_PACKETS_TO_SEND = 1000
+PROTOCOL_LOG_FILE_PATTERN = "*.log"
+TRAFFIC_LOG_FILE_PATTERN = "*.pcapng"
 
 def recordSystemTime():
     '''
@@ -17,7 +25,68 @@ def recordSystemTime():
     return subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
 
 
-def startReconvergenceExperiment(net, targetNode, neighborNode):
+def startTraffic(net, sender, receiver, packetCount, experimentStartTime):
+    """
+    Start a capture in <receiver>, then transmit test packets from <sender>.
+    """
+    
+    # Get the Mininet nodes representing the traffic source and destination
+    sender = net.get(sender)
+    receiver = net.get(receiver)
+    
+    # Grab necessary receiver arguments  (where the pcap file is located and what interface to listen for the test traffic)
+    receiverInterfaceName = receiver.defaultIntf().name
+    pcapFilePath = f"/tmp/traffic_{sender}_{receiver}_{experimentStartTime}.pcapng"
+
+    # Start the receiving end of the communication
+    receiverProcess = receiver.popen([
+        "sudo",
+        "python3", TRAFFIC_GEN, 
+        "-r", pcapFilePath, 
+        "-e", receiverInterfaceName
+    ])
+
+    # give tshark a moment to bind to the interface
+    sleep(1)
+
+    # Grab necessary sender arguments (who to send to and out of what interface should the traffic flow out of)
+    destinationIPv4Address   = receiver.IP()
+    senderIntfName = sender.defaultIntf().name
+
+    # Start the sending end of the communication
+    senderProcess = sender.popen([
+        "sudo",
+        "python3", TRAFFIC_GEN,
+        "-s", destinationIPv4Address,
+        "-c", str(packetCount),
+        "-e", senderIntfName
+    ])
+
+    return senderProcess, receiverProcess, pcapFilePath
+
+
+def stopTraffic(senderProcess, receiverProcess):
+    # Wait for the sender to finish naturally
+    senderProcess.wait()
+
+    # Ask tshark to stop politely
+    receiverProcess.send_signal(signal.SIGINT) # SIGINT (forces it to flush the pcap)
+
+    try:
+        receiverProcess.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        # If it ignores SIGINT, escalate
+        receiverProcess.terminate() # SIGTERM
+
+        try:
+            receiverProcess.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            # 
+            receiverProcess.kill() # SIGKILL
+            receiverProcess.wait()
+
+
+def startReconvergenceExperiment(net, targetNode, neighborNode, trafficNodes):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor
     to start the reconvergenec experiment.
@@ -37,27 +106,37 @@ def startReconvergenceExperiment(net, targetNode, neighborNode):
     # Record the experiment start time
     experimentStartTime = recordSystemTime()
 
+    # Start the traffic generation, if specified
+    trafficStreams = []
+    if(trafficNodes):
+        for trafficPair in trafficNodes:
+            # Tuple containing (senderProcess, receiverProcess, pcapFilePath)
+            trafficStreams.append(startTraffic(net, 
+                                                trafficPair[0], trafficPair[1], 
+                                                NUM_TEST_PACKETS_TO_SEND, 
+                                                experimentStartTime))
+    
     # Disable the interface (the timestamp associated with this event will be logged by the protocol)
     intf_to_disable.ifconfig('down')
 
     # Return the status of the interface for confirmation and experiment information
-    return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name
+    return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name, trafficStreams
 
 
-def copyProtocolLogs(dirPath):
+def copyLogs(logPattern, dirPath):
     # Convert the search directory and output file to Path objects
     search_dir = Path("/tmp").resolve()
     output_path = Path(dirPath).resolve()    
 
     # Iterate over all .log files in the source directory.
-    for log_file in search_dir.glob("*.log"):
+    for log_file in search_dir.glob(logPattern):
         if log_file.is_file():
             # Construct the destination file path using the same file name.
             destination_file = output_path / log_file.name
             shutil.copy(log_file, destination_file)
 
             # Update permissions of copied log file
-            destination_file.chmod(0o644)
+            destination_file.chmod(0o777)
 
     return
 
@@ -74,20 +153,25 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
     neighborIntfName = experimentInfo[3]
     experimentStartTime = experimentInfo[4]
     experimentStopTime = experimentInfo[5]
+    trafficInExperiment = experimentInfo[6]
 
     # Generate a name for the experiment instance that was run
     experiment_name = f"{topologyName}_{experimentStartTime}"
 
     # Create the experiment directory.
     log_dir_path = Path(logDirPath).resolve() / f"{protocol}" / experiment_name
-    log_dir_path.mkdir(parents=True, exist_ok=True)
+    log_dir_path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    # Define the subdirectory for node log files
-    nodes_dir = log_dir_path / "nodes"
-    nodes_dir.mkdir(exist_ok=True)
+    # Define the subdirectory for protocol (switching node) log files and copy the files into that directory
+    nodesDir = log_dir_path / "nodes"
+    nodesDir.mkdir(mode=0o777, exist_ok=True)
+    copyLogs(PROTOCOL_LOG_FILE_PATTERN, nodesDir.as_posix())
 
-    # Copy the protocol log files into the experiment directory
-    copyProtocolLogs(nodes_dir.as_posix())
+    # Define the subdirectory for traffic (compute node) log files and copy the files into that directory
+    if(trafficInExperiment):
+        trafficDir = log_dir_path / "traffic"
+        trafficDir.mkdir(mode=0o777, exist_ok=True)
+        copyLogs(TRAFFIC_LOG_FILE_PATTERN, trafficDir.as_posix())
 
     # Create a log file to record information associated with the experiment run
     experiment_log_file = log_dir_path / "experiment.log"
@@ -98,7 +182,8 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
         f"Failed neighbor: {neighborFailed}\n"
         f"Neighbor interface name: {neighborIntfName}\n"
         f"Experiment start time: {experimentStartTime}\n"
-        f"Experiment stop time: {experimentStopTime}"
+        f"Experiment stop time: {experimentStopTime}\n"
+        f"Traffic included: {trafficInExperiment}"
     )
     experiment_log_file.write_text(failureText)
 
@@ -109,7 +194,7 @@ def writeResults(experiment: ExperimentAnalysis) -> None:
     '''
     Write the results of the experiment analysis to a file.
     '''
-    
+
     logging.info("\n=== EXPERIMENT TIMESTAMPS ===")
     logging.info(f"Experiment start time: {experiment.start_time}\nInterface failure time: {experiment.intf_failure_time}\nExperiment stop timestamp: {experiment.stop_time}\n")
 
@@ -122,7 +207,11 @@ def writeResults(experiment: ExperimentAnalysis) -> None:
 
     logging.info("=== CONVERGENCE TIME ===")
     logging.info(f"Final failure update time: {experiment.getFinalConvergenceTimestamp()}\n")
-    logging.info(f"Convergence time: {experiment.getReconvergenceTime()} milliseconds")
+    logging.info(f"Convergence time: {experiment.getReconvergenceTime()} milliseconds\n")
+
+    if(experiment.traffic_included):
+        logging.info("=== TRAFFIC ===")
+        logging.info(experiment.traffic)
 
     return
 
@@ -130,6 +219,7 @@ def writeResults(experiment: ExperimentAnalysis) -> None:
 def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=False):
     RESULTS_FILE = "results.log"
     NODE_LOGS_DIR = "nodes"
+    TRAFFIC_LOGS_DIR = "traffic"
     
     # Determine the path of where the results log file will be saved to.
     resultsFile = os.path.join(logDirPath, RESULTS_FILE)
@@ -145,7 +235,7 @@ def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=
     logging.debug("=== DEBUGGING ===")
 
     # Read through all of the nodes log files to see the reconvergence process (including the failed node as well)
-    for logFile, nodeName in experiment.iterLogFiles(NODE_LOGS_DIR):
+    for logFile, nodeName in experiment.iterLogFiles(NODE_LOGS_DIR, ".log"):
         logging.debug(f"\n*** Analyzing {nodeName} log file ({logFile}) ***")
 
         # Through the log records for this node, determine what its total message overhead is and the time of its final update
@@ -161,6 +251,13 @@ def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=
 
         # Update OVERHEAD metric data
         experiment.overhead += nodeOverhead
+
+
+    # If there is traffic, read it and analyze it
+    if(experiment.traffic_included):
+        for logFile, nodes in experiment.iterLogFiles(TRAFFIC_LOGS_DIR, ".pcapng"):
+            logging.debug(f"\n*** Analyzing {nodes} traffic log file ({logFile}) ***")
+            experiment.traffic = analyzeTraffic(logFile, writeToFile=False)
 
     # Write the analysis results to the results log file
     writeResults(experiment)

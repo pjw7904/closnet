@@ -3,8 +3,9 @@
     "tiers": 2,
     "ports": 4,
     "southbound": [[1, 1]],
-    "node_to_fail": "L_1",
-    "neighbor_of_failing_node": "T_1",
+    "node_to_fail": "L1",
+    "neighbor_of_failing_node": "T1",
+    "traffic": [["C11", "C41"]],
     "log_dir_path": "/home/pjw7904/closnet/logs",
     "debugging": true
   }

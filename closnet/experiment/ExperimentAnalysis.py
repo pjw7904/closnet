@@ -29,12 +29,15 @@ class ExperimentAnalysis(ABC):
         self.number_of_updated_nodes = 0
         self.convergence_times = []
 
+        self.traffic_included = False
+
         self.getExperimentInfo(os.path.join(experimentDirPath, self.EXPERIMENT_LOG_FILE))
 
         # Metrics
         self.overhead = 0
         self.blast_radius = 0.0
         self.reconvergence_time = 0
+        self.traffic = None
 
 
     @abstractmethod
@@ -55,7 +58,7 @@ class ExperimentAnalysis(ABC):
         return os.path.join(self.directory, directoryToParse, node)
 
 
-    def iterLogFiles(self, directoryToParse):
+    def iterLogFiles(self, directoryToParse, logFileExtension):
         '''
         Iterate through a directory and returns the file path
         as well as the name of the file without its extension.
@@ -70,7 +73,7 @@ class ExperimentAnalysis(ABC):
             baseName = os.path.splitext(fileName)[0]
 
             # Only take the log files
-            if fileName.endswith(".log"):
+            if fileName.endswith(logFileExtension):
                 yield filePath, baseName
         
         return
@@ -103,6 +106,9 @@ class ExperimentAnalysis(ABC):
 
                 elif line.startswith("Experiment stop time:"):
                     self.stop_time = int(line.split(":", 1)[1].strip())
+
+                elif line.startswith("Traffic included:"):
+                    self.traffic_included = bool(line.split(":", 1)[1].strip())
 
         return
 

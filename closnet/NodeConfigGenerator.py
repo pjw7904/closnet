@@ -8,7 +8,7 @@ from mako.template import Template
 # Constants
 COMPUTE_TIER = 0 # No control protocol configuration for the compute nodes.
 CONFIG_DIR = "/tmp" # Place all node config files in the tmp directory.
-CONFIG_EXTENSIONS = {".conf", ".log", ".stdout", ".down", ".pid"} # All generated node config files contain a subset of these file extensions
+CONFIG_EXTENSIONS = {".conf", ".log", ".stdout", ".down", ".pid", ".pcapng"} # All generated node config files contain a subset of these file extensions
 
 def generateConfigMTP(topology):
     '''
