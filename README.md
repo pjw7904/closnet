@@ -58,6 +58,7 @@ The folded-Clos topology configuration is describe in the options arguments.
 | `-p numOfPorts` or `--ports numOfPorts` | The number of ports each switch has in the folded-Clos topology.|
 | `-s tier numOfSouthboundPorts` or `--southbound tier numOfSouthboundPorts` | The number of links to a tier below by specficing the tier and the number of southbound ports per switch. |
 | `--visualize` | A figure of the topology is generated and presented. A network is not started with this option.
+| `--bfd` | Start the Bidirectional Forwarding Detection (BFD) protocol for BGP switches. |
 
 ### Running in Experiment Mode
 
@@ -89,12 +90,13 @@ The file containing topology specifications and experiment details is recongized
 | `neighbor_of_failing_node`| string  | The node connected to the node to fail. This determines which interface must be failed on the node. |
 | `log_dir_path`| string  | The path to the JSON experiment file |
 | `debugging` | boolean | When analyzing the experiment data, additional output is added to the results file to show how each metric result is determined node-by-node. |
+| `bfd` | boolean | Start the Bidirectional Forwarding Detection (BFD) protocol for BGP switches. |
 
 For example, consider a link in your topology that looks like this:
 
-**L_1[L_1-eth2]-------[T_1-eth1]T_1**
+**L1[L1-eth2]-------[T1-eth1]T1**
 
-where L_1 and T_1 are nodes in the topology, and [L_1-eth2] and [T_1-eth1] are the names of the interfaces connected to their respective node. If you wish to fail interface L_1-eth2, you would set `node_to_fail` as L_1 and `neighbor_of_failing_node` to T_1. Interface numbering is random, so this system allows for consistency in what interface is broken, regardless of the name of that interface.
+where L1 and T1 are nodes in the topology, and [L1-eth2] and [T1-eth1] are the names of the interfaces connected to their respective node. If you wish to fail interface L1-eth2, you would set `node_to_fail` as L1 and `neighbor_of_failing_node` to T1. Interface numbering is random, so this system allows for consistency in what interface is broken, regardless of the name of that interface.
 
 #### Framework
 Three metrics are used to analyze the behavior of the protocols installed on the folded-Clos topology:
@@ -158,8 +160,8 @@ Or, the equivalent JSON experiment file (experiment mode):
     "tiers": 3,
     "ports": 4,
     "southbound": [[1, 1]],
-    "node_to_fail": "L_1",
-    "neighbor_of_failing_node": "T_1",
+    "node_to_fail": "L11",
+    "neighbor_of_failing_node": "T1",
     "log_dir_path": "/home/user/closnet/logs"
 }
 ```
@@ -178,14 +180,14 @@ Once Mininet is up and running, the current state of any given node can be deter
 
 ### MTP
 
-Logs are stored in the `/tmp` directory, with the following log files available to view for any given node (L_1 in this example):
+Logs are stored in the `/tmp` directory, with the following log files available to view for any given node (L1 in this example):
 
 ```bash
-user@system:/tmp$ ls | grep L_1
-L_1.conf
-L_1.log
-L_1.stdout
-L_1.down
+user@system:/tmp$ ls | grep L1
+L1.conf
+L1.log
+L1.stdout
+L1.down
 ```
 | File      | Description |
 | ----------- | ----------- |
@@ -196,20 +198,22 @@ L_1.down
 
 ### BGP
 
-Logs are stored in the `/tmp` directory, with the following log files available to view for any given node (L_1 in this example):
+Logs are stored in the `/tmp` directory, with the following log files available to view for any given node (L1 in this example):
 
 ```bash
-user@system:/tmp$ ls | grep L_1
-L_1.bgpd.pid
-L_1.conf
-L_1.log
-L_1.zebra.pid
+user@system:/tmp$ ls | grep L1
+L1.bfdd.pid
+L1.bgpd.pid
+L1.conf
+L1.log
+L1.zebra.pid
 ```
 
 | File      | Description |
 | ----------- | ----------- |
 | `.bgpd.pid` | PID file for bgpd, do not touch. |
 | `.zebra.pid` | PID file for zebra, do not touch. |
+| `.bfdd.pid` | PID file for BFD, do not touch (optional protocol). |
 | `.conf` | The FRR configuration file for the node. It contains BGP configuration. |
 | `.log` | The FRR log file for the node describing BGP and Zebra actions and updates. |
 
