@@ -242,7 +242,8 @@ def main():
         protocolHost = MTPHost
 
     elif(config.protocol == BGP):
-        generateConfigBGP(topology)
+        BGPSwitch.ENABLE_BFD = config.bfd
+        generateConfigBGP(topology, config.bfd)
         protocolSwitch = BGPSwitch
         protocolHost = BGPHost
 

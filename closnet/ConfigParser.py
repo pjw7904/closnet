@@ -53,7 +53,12 @@ def parseArgs() -> argparse.Namespace:
                             help='The number of links to a tier below by specficing the tier and the number of southbound ports per switch.')
 
     # Additional utilities/features configuration
-    argParser.add_argument('--visualize', action='store_true')
+    argParser.add_argument('--visualize', 
+                           action='store_true')
+    
+    argParser.add_argument('--bfd', 
+                           action='store_true',
+                           help="Start the FRR BFD daemon (bfdd) on every BGP switch")
     
     # If a JSON config was passed in via the preliminary parse, load it and set those values as defaults.
     if prelimArgs.file:

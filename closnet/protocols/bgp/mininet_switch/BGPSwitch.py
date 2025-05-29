@@ -8,6 +8,7 @@ class BGPSwitch(Node):
     """
 
     ID = 0
+    ENABLE_BFD = False
 
     def __init__(self, name, **kwargs):
         kwargs['inNamespace'] = True
@@ -38,6 +39,17 @@ class BGPSwitch(Node):
         self.cmd(start_zebra)
         self.waitOutput()
 
+        # Start BFD in the node's namespace (if requested, otherwise it stays off)
+        if self.ENABLE_BFD:
+            start_bfdd = (
+                f'/usr/lib/frr/bfdd '
+                f'-d '
+                f'-N {self.name} '
+                f'-i /tmp/{self.name}.bfdd.pid'
+            )
+            self.cmd(start_bfdd)
+            self.waitOutput()
+
         # Start BGP in the node's namespace
         start_bgpd = (
             f'/usr/lib/frr/bgpd '
@@ -52,16 +64,19 @@ class BGPSwitch(Node):
         self.cmd(f'vtysh -N "{self.name}" -f "{config_file}"')
         self.waitOutput()
 
-        print(f"FRR daemons (zebra & bgpd) started on {self.name}")
+        print("FRR daemons" 
+              f"{' (zebra, bgpd, bfdd)' if self.ENABLE_BFD else ' (zebra & bgpd)'} started on {self.name}")
 
     def stop(self):
         """Stops FRR daemons running on this node."""
 
         # List of daemons to stop
-        DAEMONS = ('zebra', 'bgpd')
+        daemons = ['zebra', 'bgpd']
+        if self.ENABLE_BFD:
+                    daemons.append('bfdd')
 
         # Terminate daemons using PIDs from PID files
-        for daemon in DAEMONS:
+        for daemon in daemons:
             pid_file = f"/tmp/{self.name}.{daemon}.pid"
 
             if self.cmd(f'test -f {pid_file} && echo "exists"').strip() == 'exists':

@@ -46,7 +46,7 @@ def generateConfigMTP(topology):
     return
 
 
-def generateConfigBGP(topology):
+def generateConfigBGP(topology, installBFD):
     '''
     Create and save configuration files for BGP nodes.
 
@@ -55,7 +55,7 @@ def generateConfigBGP(topology):
 
     TEMPLATE_LOCATION = os.path.join(os.path.dirname(__file__), 
                                      "protocols/bgp/config/bgp_conf.mako")
-
+ 
     # Open the BGP configuration template
     try: 
         bgpTemplate = Template(filename=TEMPLATE_LOCATION)
@@ -79,7 +79,8 @@ def generateConfigBGP(topology):
             nodeTemplate = {'node_name': node,
                             'neighbors': neighboringNodes, 
                             'bgp_asn': topology.nodes[node]['ASN'], 
-                            'networks': topology.nodes[node]['advertise']}
+                            'networks': topology.nodes[node]['advertise'],
+                            'bfd': installBFD}
 
             # Process the data and render a custom BGP configuration.
             bgpConfig = bgpTemplate.render(**nodeTemplate)
