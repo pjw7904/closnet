@@ -123,6 +123,13 @@ def startReconvergenceExperiment(net, targetNode, neighborNode, trafficNodes):
     return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name, trafficStreams
 
 
+def _mkdirWithPermissions(p: Path) -> None:
+    p.mkdir(parents=True, exist_ok=True)
+    p.chmod(0o777)
+
+    return
+
+
 def copyLogs(logPattern, dirPath):
     # Convert the search directory and output file to Path objects
     search_dir = Path("/tmp").resolve()
@@ -159,18 +166,22 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
     experiment_name = f"{topologyName}_{experimentStartTime}"
 
     # Create the experiment directory.
-    log_dir_path = Path(logDirPath).resolve() / f"{protocol}" / experiment_name
-    log_dir_path.mkdir(mode=0o777, parents=True, exist_ok=True)
+    base_dir = Path(logDirPath).resolve() # ~/closnet/logs
+    protocol_dir = base_dir / protocol # ~/closnet/logs/<protocol>
+    log_dir_path = protocol_dir / experiment_name # ~/closnet/logs/<protocol>/<experiment_name>
+
+    for directory in (base_dir, protocol_dir, log_dir_path):
+        _mkdirWithPermissions(directory)
 
     # Define the subdirectory for protocol (switching node) log files and copy the files into that directory
     nodesDir = log_dir_path / "nodes"
-    nodesDir.mkdir(mode=0o777, exist_ok=True)
+    _mkdirWithPermissions(nodesDir)
     copyLogs(PROTOCOL_LOG_FILE_PATTERN, nodesDir.as_posix())
 
     # Define the subdirectory for traffic (compute node) log files and copy the files into that directory
     if(trafficInExperiment):
         trafficDir = log_dir_path / "traffic"
-        trafficDir.mkdir(mode=0o777, exist_ok=True)
+        _mkdirWithPermissions(trafficDir)
         copyLogs(TRAFFIC_LOG_FILE_PATTERN, trafficDir.as_posix())
 
     # Create a log file to record information associated with the experiment run
@@ -186,6 +197,7 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
         f"Traffic included: {trafficInExperiment}"
     )
     experiment_log_file.write_text(failureText)
+    experiment_log_file.chmod(0o777) 
 
     return str(log_dir_path)
 
@@ -261,3 +273,7 @@ def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=
 
     # Write the analysis results to the results log file
     writeResults(experiment)
+
+    # Shutdown logging and update permissions
+    logging.shutdown()
+    Path(resultsFile).chmod(0o777)
