@@ -108,7 +108,8 @@ class ExperimentAnalysis(ABC):
                     self.stop_time = int(line.split(":", 1)[1].strip())
 
                 elif line.startswith("Traffic included:"):
-                    self.traffic_included = bool(line.split(":", 1)[1].strip())
+                    value = line.split(":", 1)[1].strip()
+                    self.traffic_included = value.lower() == "true"
 
         return
 
