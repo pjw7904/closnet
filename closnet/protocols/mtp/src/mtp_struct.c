@@ -84,7 +84,8 @@ int is_all_down(struct control_port* cp_head){
 }
 
 
-void print_control_port_table(struct control_port* cp_head){
+void print_control_port_table(struct control_port* cp_head)
+{
     struct control_port* cp_temp = cp_head;
     log_message("--- Printing control port table ---\n");
     while(cp_temp){

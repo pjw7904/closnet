@@ -151,27 +151,19 @@ struct control_port* setControlInterfaces(struct ifaddrs *ifaddr, char *computeS
     struct control_port* cp_head = NULL;
 
     // Loop through each network interface on the system.
-    for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) 
+    for (ifa = ifaddr; ifa; ifa = ifa->ifa_next)
     {
-        if(ifa->ifa_addr == NULL) continue;
+        if (!ifa->ifa_addr) continue;
 
-        // Grab the interface family (AF_INET = IPv4 addressing, AF_PACKET = raw layer 2).
-        family = ifa->ifa_addr->sa_family;
-
-        // If the interface is active/up, and contains the node name in the interface name.
-        if(family == AF_PACKET && 
-            strncmp(ifa->ifa_name, nodeName, strlen(nodeName)) == 0 &&
-            (ifa->ifa_flags & IFF_UP) != 0) 
+        if (ifa->ifa_addr->sa_family == AF_PACKET &&
+            (ifa->ifa_flags & IFF_UP) &&                    /* interface is up   */
+            !(isLeaf && strcmp(ifa->ifa_name,               /* skip compute intf */
+                            computeSubnetIntfName) == 0))
         {
-            // If the node is a leaf and this is the compute interface, skip it.
-            if(isLeaf && strcmp(ifa->ifa_name, computeSubnetIntfName) == 0)
-            {
-                continue;
-            }
-
             cp_head = add_to_control_port_table(cp_head, ifa->ifa_name);
-            log_message("\nAdded interface %s as a control port.\n", ifa->ifa_name);
-        } 
+            log_message("Added interface %s as a control port.\n",
+                        ifa->ifa_name);
+        }
     }
 
     // return the head of the linked list.

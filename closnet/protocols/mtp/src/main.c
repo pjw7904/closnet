@@ -172,6 +172,8 @@ int main(int argc, char **argv)
         log_message("Root VID: None\n\n"); 
     }
 
+    print_control_port_table(cp_head);
+
     // TO-DO: Ask Vincent about the magic number 32, and why is the port array being given VID_LEN?
     // Initalize an array to add VIDs to as necessary (this also is used for ports sometimes?).
     temp_2d_array = malloc(32 * sizeof(char*));
