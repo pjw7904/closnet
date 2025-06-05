@@ -1,6 +1,6 @@
 {
     "protocol": "bgp",
-    "bfd": false,
+    "bfd": true,
     "tiers": 2,
     "ports": 4,
     "southbound": [[1, 1]],
@@ -9,4 +9,4 @@
     "traffic": [["C11", "C41"]],
     "log_dir_path": "/home/pjw7904/closnet/logs",
     "debugging": true
-  }
+}
