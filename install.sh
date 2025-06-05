@@ -29,15 +29,14 @@ FRRVER="frr-stable"
 echo deb '[signed-by=/usr/share/keyrings/frrouting.gpg]' https://deb.frrouting.org/frr \
      $(lsb_release -s -c) $FRRVER | tee -a /etc/apt/sources.list.d/frr.list
 
-## update and install FRR
-apt update && apt install -y frr frr-pythontools
+apt install -y frr frr-pythontools
 
 # Give permissions to user to access frr files (this requires a logout after to take effect)
 usermod -a -G frr,frrvty $(logname)
 ############################################
 
 ############################################
-# INSTALL ADDITIONAL PYTHON DEPENDENCIES
+# INSTALL ADDITIONAL DEPENDENCIES
 
 if [ -f "requirements.txt" ]; then
     echo "Installing Python dependencies..."
@@ -45,6 +44,10 @@ if [ -f "requirements.txt" ]; then
 else
     echo "requirements.txt not found, skipping Python dependencies installation."
 fi
+
+echo "Installing additional dependencies..."
+
+sudo DEBIAN_FRONTEND=noninteractive apt -y install tshark
 
 ############################################
 # INSTALL & COMPILE MTP IMPLEMENTATION
