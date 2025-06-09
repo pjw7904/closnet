@@ -232,7 +232,17 @@ def main():
     # If the topology configuration was built, but you only want a figure of the topology, exit here.
     if(config.visualize):
         info("No Mininet built, JSON topology file saved and figure should appear.\n")
-        drawFoldedClos(topology)
+        
+        # Users that want to visualize an experiment and how the topology is impacted can do so.
+        if(config.file):
+            drawFoldedClos(topology, 
+                           failed_link=(config.node_to_fail, config.neighbor_of_failing_node),
+                           show_pristine=False)
+        
+        # Otherwise, if the user just wants a picture of the folded-Clos, use CLI options like you would in interactive mode 
+        else:
+            drawFoldedClos(topology)
+
         stopNetAndCleanup()
 
     # Generate the configuration files for each node in the topology.
