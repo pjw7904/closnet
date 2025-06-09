@@ -5,7 +5,7 @@ import logging
 import os
 import signal
 from pathlib import Path
-from time import sleep
+from time import sleep, time_ns
 
 # Custom libraries
 from closnet.experiment.ExperimentAnalysis import ExperimentAnalysis
@@ -22,7 +22,7 @@ def recordSystemTime():
     Record the current time in Epoch notation.
     '''
 
-    return subprocess.check_output(["date", "+%s%3N"], text=True).strip() # Output comes with newline, so strip it.
+    return time_ns() // 1000000
 
 
 def startTraffic(net, sender, receiver, packetCount, experimentStartTime):
@@ -86,17 +86,19 @@ def stopTraffic(senderProcess, receiverProcess):
             receiverProcess.wait()
 
 
-def startReconvergenceExperiment(net, targetNode, neighborNode, trafficNodes):
+def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, trafficNodes):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor
     to start the reconvergenec experiment.
     '''
 
     # Get the link between the two nodes
-    link = net.linksBetween(net.get(targetNode), net.get(neighborNode))[0]
+    targetNode = net.get(targetNodeName)
+    neighborNode = net.get(neighborNodeName)
+    link = net.linksBetween(targetNode, neighborNode)[0]
 
     # Find the right interface, it's an object within link, link.intf1 or link.intf2
-    if link.intf1.node.name == targetNode:
+    if link.intf1.node.name == targetNodeName:
         intf_to_disable = link.intf1
         neighbor_intf = link.intf2
     else:
@@ -115,9 +117,10 @@ def startReconvergenceExperiment(net, targetNode, neighborNode, trafficNodes):
                                                 trafficPair[0], trafficPair[1], 
                                                 NUM_TEST_PACKETS_TO_SEND, 
                                                 experimentStartTime))
-    
+
     # Disable the interface (the timestamp associated with this event will be logged by the protocol)
     intf_to_disable.ifconfig('down')
+    #targetNode.cmd(f"tc qdisc add dev {intf_to_disable.name} root netem loss 100%")
 
     # Return the status of the interface for confirmation and experiment information
     return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name, trafficStreams
