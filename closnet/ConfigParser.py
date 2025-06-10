@@ -55,7 +55,13 @@ def parseArgs() -> argparse.Namespace:
     # Additional utilities/features configuration
     argParser.add_argument('--visualize', 
                            action='store_true')
-    
+
+    argParser.add_argument('--csv',
+                        action='store_true',
+                        help='Do not run an experiment; instead aggregate all '
+                                'results.log files for the topology implied by '
+                                '--file into a single CSV.')
+
     argParser.add_argument('--bfd', 
                            action='store_true',
                            help="Start the FRR BFD daemon (bfdd) on every BGP switch")

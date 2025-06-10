@@ -20,6 +20,7 @@ from closnet.experiment.Experiment import *
 from closnet.ConfigParser import *
 from closnet.NodeConfigGenerator import *
 from closnet.utils.DrawClos import drawFoldedClos
+from closnet.utils.GenerateCSV import run as gen_csv
 
 ## Meshed Tree Protocol (MTP) modules
 from closnet.protocols.mtp.mininet_switch.MTPSwitch import MTPSwitch, MTPHost
@@ -209,6 +210,11 @@ def main():
     # Generate the name associated with this particular topology.
     topologyName = generateTestName(config)
     print(f"Topology name = {topologyName}")
+
+    # Aggregate results in a CSV file and exit if desired. 
+    if config.csv:
+        gen_csv(config.protocol, topologyName)
+        stopNetAndCleanup()
 
     # Determine if this topology already has a configuration.
     topology = loadTopologyConfig(topologyName)
