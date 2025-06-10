@@ -160,9 +160,9 @@ class ExperimentAnalysis(ABC):
         '''
 
         if(useExperimentStartTime):
-            return timestamp > self.start_time and timestamp < self.stop_time
+            return timestamp >= self.start_time and timestamp <= self.stop_time
         else:
-            return timestamp > self.intf_failure_time and timestamp < self.stop_time
+            return timestamp >= self.intf_failure_time and timestamp <= self.stop_time
 
 
     def getReconvergenceTime(self):
