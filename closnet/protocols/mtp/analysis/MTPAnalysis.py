@@ -24,8 +24,7 @@ class MTPAnalysis(ExperimentAnalysis):
     Many lines don't contain timestamps at all; we ignore those.
     """
 
-    # Example regex patterns:
-    #  We parse a 13-digit timestamp from "at 1742490729396".
+    # Patterns to match in log file records
     INTF_FAILURE_PATTERN = re.compile(r'Detected a failure, shut down port ([^ ]+) at time (\d{13})')
     INTF_DISABLE_KEEPALIVE_PATTERN = re.compile(r'Disabled for port ([^ ]+) due to a missing KEEP ALIVE at time (\d{13})')
     RECV_UPDATE_PATTERN = re.compile(r'FAILURE UPDATE message received at (\d{13}), on port ([^ ]+)')
@@ -34,7 +33,7 @@ class MTPAnalysis(ExperimentAnalysis):
 
     def __init__(self, experimentDirPath):
         super().__init__(experimentDirPath)
-        # MTP lines show the timestamp in the text itself, e.g. "... at time 1742490729154" so no self.timestamp_format needed.
+        # MTP lines show the timestamp in the text itself, e.g., "... at time 1742490729154" so no self.timestamp_format needed.
 
 
     def parseLogFile(self, nodeName, logFile):
@@ -58,31 +57,17 @@ class MTPAnalysis(ExperimentAnalysis):
                     intfName = interfaceFailure.group(1)
                     recordTimestamp = int(interfaceFailure.group(2))
 
-                    # If the failure occurred prior to the start of the test, it was a failed test
+                    # If the failure occurred prior to the start of the experiment, it was a failed experiment
                     if recordTimestamp < self.start_time:
                         raise Exception(f"[{nodeName}] Interface failure at {recordTimestamp} is earlier than experiment start at {self.start_time}!")
 
-                    # If the failure occurred after the end of the test, it doesn't matter (and is common when tearing down the topology)
+                    # If the failure occurred after the end of the experiment, it doesn't matter (and is common when tearing down the topology)
                     if recordTimestamp > self.stop_time:
                         continue
 
-                    logging.debug(f"[{nodeName}] Failed interface detected: {line}")
-                    logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
-                    logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
-
-                    # If the interface failure log came from the neighbor of the node that lost an interface.
-                    if self.isFailedNode(nodeName) and self.isFailedInterface(intfName):
-                        # Record the time the interface actually failed
-                        self.intf_failure_time = recordTimestamp
-                        convergenceTime = max(convergenceTime, recordTimestamp)
-                        updated = True
-
-                        logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
-
-                    # If any other failure is detected, the test was a failure.
-                    else:
-                        logging.debug(f"[{nodeName}] Saw unexpected interface failure: {line}")
-                        raise Exception(f"Log error: Interface failure on node {nodeName}, Please check logs.")
+                    # Analyze the failure
+                    convergenceTime = self.parseIntfFailure(nodeName, line, recordTimestamp, intfName, convergenceTime)
+                    updated = True
 
                     # move onto the next record
                     lastUpdateValid = False
@@ -124,21 +109,9 @@ class MTPAnalysis(ExperimentAnalysis):
                         lastUpdateValid = False
                         continue
 
-                    logging.debug(f"[{nodeName}] Disabled interface detected: {line}")
-                    logging.debug(f"[{nodeName}] Disabled interface timestamp: {recordTimestamp}")
-                    logging.debug(f"[{nodeName}] Disabled interface name: {intfName}")
-
-                    # If the interface disabled log came from the neighbor of the node that lost an interface.
-                    if self.isFailedNeighbor(nodeName) and self.isFailedNeighborInterface(intfName):
-                        convergenceTime = max(convergenceTime, recordTimestamp)
-                        updated = True
-
-                        logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
-
-                    # If any other disabled interface is detected, the test was a failure.
-                    else:
-                        logging.debug(f"[{nodeName}] Saw unexpected interface failure: {line}")
-                        raise Exception(f"Log error: Interface disabled on node {nodeName}, Please check logs.")
+                    # Analyze the interface timeout
+                    convergenceTime = self.parseIntfTimeout(nodeName, line, recordTimestamp, intfName, convergenceTime)
+                    updated = True
 
                     # move onto the next record
                     lastUpdateValid = False
@@ -159,3 +132,69 @@ class MTPAnalysis(ExperimentAnalysis):
         logging.debug(f"[{nodeName}] Final values: Convergence Time = {convergenceTime} | Updated = {updated} | Overhead = {overhead}")
 
         return convergenceTime, updated, overhead
+
+
+    def parseIntfFailure(self, nodeName, line, recordTimestamp, intfName, convergenceTime):
+        logging.debug(f"[{nodeName}] Failed interface detected: {line}")
+        logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
+        logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
+
+        # If the interface failure log came from the the node that lost an interface.
+        if(self.isFailedNode(nodeName) and self.isFailedInterface(intfName)):
+            # Record the time the interface actually failed
+            self.updateIntfFailureTime(recordTimestamp)
+            convergenceTime = max(convergenceTime, recordTimestamp)
+
+            logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
+
+        # If the interface failure log came from the neighbor of the node that lost an interface.
+        elif(self.isFailedNeighbor(nodeName) and self.isFailedNeighborInterface(intfName) and self.neighbor_intf_disabled is False):
+            self.neighbor_intf_failed = True
+            self.updateIntfFailureTime(recordTimestamp)
+            convergenceTime = max(convergenceTime, recordTimestamp)
+
+            logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
+
+        # If any other failure is detected, the test was a failure.
+        else:
+            logging.debug(f"[{nodeName}] Saw unexpected interface failure: {line}")
+            raise Exception(f"Log error: Interface failure on node {nodeName}, Please check logs.")
+        
+        return convergenceTime
+    
+    
+    def parseIntfTimeout(self, nodeName, line, recordTimestamp, intfName, convergenceTime):
+        logging.debug(f"[{nodeName}] Disabled interface detected: {line}")
+        logging.debug(f"[{nodeName}] Disabled interface timestamp: {recordTimestamp}")
+        logging.debug(f"[{nodeName}] Disabled interface name: {intfName}")
+
+        # If the interface disabled log came from the neighbor of the node that lost an interface.
+        if(self.isFailedNeighbor(nodeName) and self.isFailedNeighborInterface(intfName) and self.neighbor_intf_failed is False):
+            self.neighbor_intf_disabled = True
+            convergenceTime = max(convergenceTime, recordTimestamp)
+
+            logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
+
+        # If any other disabled interface is detected, the test was a failure.
+        else:
+            logging.debug(f"[{nodeName}] Saw unexpected interface disabled: {line}")
+            raise Exception(f"Log error: Interface disabled on node {nodeName}, Please check logs.")
+
+        return
+    
+    def updateIntfFailureTime(self, candidateFailureTime):
+        '''
+        Given the two failure times on both sides of a link, the failure time
+        is the first recorded failure.
+        '''
+
+        # If not time has been recorded yet, it's the failure time.
+        if(not self.intf_failure_time):
+            self.intf_failure_time = candidateFailureTime
+        
+        # Otherwise, find the smaller of the two timestamps.
+        else:
+            self.intf_failure_time = min(self.intf_failure_time, candidateFailureTime)
+
+
+        return

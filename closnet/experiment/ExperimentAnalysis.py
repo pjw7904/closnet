@@ -20,10 +20,12 @@ class ExperimentAnalysis(ABC):
         self.intf_failure_time = 0
 
         self.failed_node = None
-        self.neighbor_node = None
-
         self.failed_intf = None
+
+        self.neighbor_node = None
         self.neighbor_intf = None
+        self.neighbor_intf_failed = False
+        self.neighbor_intf_disabled = False
 
         self.number_of_nodes = 0
         self.number_of_updated_nodes = 0
