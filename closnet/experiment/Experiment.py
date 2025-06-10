@@ -250,7 +250,7 @@ def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=
     logging.debug("=== DEBUGGING ===")
 
     # Read through all of the nodes log files to see the reconvergence process (including the failed node as well)
-    for logFile, nodeName in experiment.iterLogFiles(NODE_LOGS_DIR, ".log"):
+    for logFile, nodeName in experiment.iterLogFiles(NODE_LOGS_DIR, ".log", priorityNodes=(experiment.failed_node, experiment.neighbor_node)):
         logging.debug(f"\n*** Analyzing {nodeName} log file ({logFile}) ***")
 
         # Through the log records for this node, determine what its total message overhead is and the time of its final update

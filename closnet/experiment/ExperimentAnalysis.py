@@ -51,22 +51,31 @@ class ExperimentAnalysis(ABC):
         pass
 
 
-    def getLogFile(self, directoryToParse, node):
+    def getLogFile(self, directoryToParse, node, logFileExtension):
         '''
         Return the filepath for a node's log file.
         '''
 
-        node += ".log"
+        node += f"{logFileExtension}"
         return os.path.join(self.directory, directoryToParse, node)
 
 
-    def iterLogFiles(self, directoryToParse, logFileExtension):
+    def iterLogFiles(self, directoryToParse, logFileExtension, priorityNodes=None):
         '''
         Iterate through a directory and returns the file path
         as well as the name of the file without its extension.
         '''
 
+        if priorityNodes is None:
+            priorityNodes = ()
+
         directoryPath = os.path.join(self.directory, directoryToParse)
+        fileSeen = set()
+
+        for node in priorityNodes:
+            filePath = self.getLogFile(directoryToParse, node, logFileExtension)
+            fileSeen.add(node)
+            yield filePath, node
 
         for fileName in os.listdir(directoryPath):
             filePath = os.path.join(directoryPath, fileName)
@@ -75,7 +84,7 @@ class ExperimentAnalysis(ABC):
             baseName = os.path.splitext(fileName)[0]
 
             # Only take the log files
-            if fileName.endswith(logFileExtension):
+            if fileName.endswith(logFileExtension) and baseName not in fileSeen:
                 yield filePath, baseName
         
         return
