@@ -10,8 +10,8 @@ RUNS=$1
 
 for ((i = 1; i <= RUNS; i++)); do
   echo -e "\n=== RUN $i/$RUNS ==="
-  sudo python3 -m closnet --file test.json
+  sudo python3 -m closnet --file experiment.json
 done
 
 # Create the CSV from all runs of this topology/protocol
-sudo python3 -m closnet --file test.json --csv
+sudo python3 -m closnet --file experiment.json --csv
