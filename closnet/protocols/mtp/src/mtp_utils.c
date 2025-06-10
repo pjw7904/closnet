@@ -17,19 +17,37 @@ uint8_t get_all_ethernet_interface2(char** dest, const char* nodeName)
 
     tmp = addrs; // initialize tmp to where addresses are stored
 
-    while(tmp)
+    /* Walk the interface list and copy those that are both
+    *  - administratively UP          (IFF_UP)
+    *  - carrier present / lower-layer up (IFF_LOWER_UP or, as a fallback, IFF_RUNNING)
+    */
+    while (tmp) 
     {
-        if(tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET)
-        {   
-            if(strncmp(tmp->ifa_name, nodeName, strlen(nodeName)) == 0 && (tmp->ifa_flags & IFF_UP) != 0) 
-            {
-                strcpy(dest[counter],tmp->ifa_name);
-                counter++;
+        if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_PACKET) {
+
+            /* Does this ifname start with the node’s prefix? */
+            if (strncmp(tmp->ifa_name, nodeName, strlen(nodeName)) == 0) {
+
+                /* Admin-up? */
+                if (tmp->ifa_flags & IFF_UP) {
+
+                    /* Carrier-up?  Prefer IFF_LOWER_UP, else use IFF_RUNNING */
+    #ifdef IFF_LOWER_UP
+                    if (tmp->ifa_flags & IFF_LOWER_UP)
+    #else
+                    if (tmp->ifa_flags & IFF_RUNNING)
+    #endif
+                    {
+                        /* Interface is usable – keep it */
+                        strcpy(dest[counter], tmp->ifa_name);
+                        counter++;
+                    }
+                }
             }
         }
-
         tmp = tmp->ifa_next;
     }
+
 
     freeifaddrs(addrs);
 
