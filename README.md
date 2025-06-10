@@ -142,6 +142,19 @@ A experiment follows the following steps:
 
 Each experiment is recorded in a directory with the same name as the topology (protocol + Clos description) along with an Epoch timestamp with the experiment start time. The directory will contain a `nodes` subdirectory that contains all of the protocol log files from the switches. If traffic generation occurred, a `traffic` subdirectory with the pcapng of received traffic will also be present. Furthermore, the directory will contain an `experiment.log` file that describes when the experiment started and stopped as well as what interface was broken, and a `results.log` file that contains results for the three or four metrics. Debugging data will be in the results file if specified as well.
 
+#### Bulk Testing
+
+If you would like to run multiple tests in succession and aggregate the results, run the run_experiments script. For example, if you would like to run 10 tests based on the setup in experiment.json:
+
+```bash
+# Located in Closnet root directory
+bash run_experiments.sh 10
+```
+
+By default, experiment.json is added as the file argument. This can be changed easily by modifying the bash code.
+
+Once the tests are completed, a csv file with the aggregated results is placed in the appropriate protocol log directory.
+
 ### Protocols
 
 By default, Closnet includes two data center protocols to test.
