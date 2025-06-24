@@ -38,7 +38,7 @@ class BGPAnalysis(ExperimentAnalysis):
         self.timestamp_format = self.TIMESTAMP_FORMAT
 
 
-    def getEpochTime(self, timestamp):
+    def getEpochTime(self, timestamp, nodeName):
         '''
         Return a epoch timestamp based on the original timestamp.
         '''
@@ -46,10 +46,17 @@ class BGPAnalysis(ExperimentAnalysis):
         if self.timestamp_format is None:
             raise Exception("No timestamp format set, cannot convert to epoch time format")
 
-        datetimeFormat = datetime.strptime(timestamp, self.timestamp_format)
+        try:
+            datetimeFormat = datetime.strptime(timestamp, self.timestamp_format)
         
-        return int(datetime.timestamp(datetimeFormat) * 1000) # Reduce precision by moving milliseconds into main timestamp.
-    
+            return int(datetime.timestamp(datetimeFormat) * 1000) # Reduce precision by moving milliseconds into main timestamp.
+
+        # No fractional part - pad with zeros and try again
+        except:
+            logging.debug(f"[{nodeName}] Invalid log timestamp: {timestamp}, attempting to pad")
+            timestamp_fixed = timestamp[:19] + '.000'
+            return int(datetime.strptime(timestamp_fixed, self.timestamp_format).timestamp() * 1000)
+
 
     def parseFailureLogRecord(self, nodeName, intfName, recordTimestamp) -> None:
         # If the interface failure log came from the neighbor of the node that lost an interface.
@@ -84,7 +91,7 @@ class BGPAnalysis(ExperimentAnalysis):
             # Iterate over every record in the node's log file
             for line in file:
                 # Convert the timestamp into Epoch formatting
-                recordTimestamp = self.getEpochTime(line[:self.TIMESTAMP_LENGTH])
+                recordTimestamp = self.getEpochTime(line[:self.TIMESTAMP_LENGTH], nodeName)
 
                 # Check to see if the log record describes an interface failure
                 interfaceFailure = self.INTF_FAILURE_PATTERN.search(line)
