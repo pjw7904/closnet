@@ -64,18 +64,18 @@ def startExperimentMode(net, config, topologyName) -> None:
 
     # Start the reconvergence experiment by failing the specified interface and confirm the operation was successful
     (
-        intf_is_down,
+        interfaceFailureConfirmation,
         experimentStartTime,
         intfName,
         neighborIntfName,
         trafficStreams,
     ) = startReconvergenceExperiment(
         net,
-        config.node_to_fail, config.neighbor_of_failing_node,
+        config.node_to_fail, config.neighbor_of_failing_node, config.soft_failure,
         config.traffic,
     )
 
-    if(not intf_is_down):
+    if(not interfaceFailureConfirmation):
         info(f"EXPERIMENT STEP 2: Interface failure was not successful.\n")
 
         stopNetAndCleanup()
@@ -120,6 +120,10 @@ def startExperimentMode(net, config, topologyName) -> None:
         experiment = BGPAnalysis(experimentDirPath)
     else:
         raise Exception("Unknown/no protocol chosen, experiment cannot be analyzed")
+    
+    # Soft interface failures will not have a log for when the link was disabled, one is defined
+    if(config.soft_failure):
+        experiment.intf_failure_time = interfaceFailureConfirmation
 
     runExperimentAnalysis(experimentDirPath, experiment, config.debugging)
 

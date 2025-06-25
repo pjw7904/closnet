@@ -86,7 +86,7 @@ def stopTraffic(senderProcess, receiverProcess):
             receiverProcess.wait()
 
 
-def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, trafficNodes):
+def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, isSoftLinkFailure, trafficNodes):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor
     to start the reconvergenec experiment.
@@ -118,12 +118,17 @@ def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, trafficN
                                                 NUM_TEST_PACKETS_TO_SEND, 
                                                 experimentStartTime))
 
-    # Disable the interface (the timestamp associated with this event will be logged by the protocol)
-    intf_to_disable.ifconfig('down')
-    #targetNode.cmd(f"tc qdisc add dev {intf_to_disable.name} root netem loss 100%")
+    # Soft link failure (interface egress traffic starvation)
+    if(isSoftLinkFailure):
+        interfaceFailureConfirmation = recordSystemTime()
+        targetNode.cmd(f"tc qdisc add dev {intf_to_disable.name} root netem loss 100%")
+    # Hard link failure (interface and thus link failure)
+    else:
+        intf_to_disable.ifconfig('down')
+        interfaceFailureConfirmation = not intf_to_disable.isUp()
 
     # Return the status of the interface for confirmation and experiment information
-    return not intf_to_disable.isUp(), experimentStartTime, intf_to_disable.name, neighbor_intf.name, trafficStreams
+    return interfaceFailureConfirmation, experimentStartTime, intf_to_disable.name, neighbor_intf.name, trafficStreams
 
 
 def _mkdirWithPermissions(p: Path) -> None:
