@@ -108,12 +108,12 @@ class ClosGenerator:
         :returns: The name given to the node.
         """
 
-        name = self.getNodeTitle(currentTier, topTier)
+        title = self.getNodeTitle(currentTier, topTier)
 
         if(currentTier != topTier):
-            name += prefix
-
-        name += nodeNum
+            name = f"{title}{currentTier}_{prefix}{nodeNum}"
+        else:
+            name = f"{title}{currentTier}_{nodeNum}"
 
         return name
 
@@ -213,7 +213,7 @@ class ClosGenerator:
 
                     # Tier 1 connects to Tier 0, the compute nodes.
                     elif(currentTier == self.LEAF_TIER):
-                        southPrefix = northNode.strip(self.LEAF_NAME)
+                        southPrefix = northNode.split('_', 1)[1]
                         southNodeNum = intf
 
                     southNode = self.generateNode(southPrefix, str(southNodeNum), currentTier-1, topTier)
