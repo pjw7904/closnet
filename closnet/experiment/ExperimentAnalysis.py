@@ -1,10 +1,20 @@
 # Core libraries
 import os
+import re
 from abc import ABC, abstractmethod
 
 
 class ExperimentAnalysis(ABC):
     EXPERIMENT_LOG_FILE = "experiment.log"
+    INVALID_INTERFACE_FAILURE = 0
+    VALID_INTERFACE_FAILURE = 1
+    VALID_NEIGHBOR_FAILURE = 2
+
+    HARD_LINK_FAILURE = 1
+    SOFT_LINK_FAILURE = 2
+
+    FAILED_LOG = 1
+    DISABLED_LOG = 2
 
     def __init__(self, experimentDirPath):
         if not os.path.exists(experimentDirPath):
@@ -15,17 +25,18 @@ class ExperimentAnalysis(ABC):
         self.timestamp_format = None
 
         # Experiment information
+        self.experiment_type = None
         self.start_time = 0
         self.stop_time = 0
         self.intf_failure_time = 0
 
         self.failed_node = None
         self.failed_intf = None
+        self.found_failed_intf = False
 
         self.neighbor_node = None
-        self.neighbor_intf = None
-        self.neighbor_intf_failed = False
-        self.neighbor_intf_disabled = False
+        self.failed_neighbor_intf = None
+        self.found_failed_neighbor_intf = False
 
         self.number_of_nodes = 0
         self.number_of_updated_nodes = 0
@@ -110,7 +121,15 @@ class ExperimentAnalysis(ABC):
                     self.failed_intf = line.split(":", 1)[1].strip()
 
                 elif line.startswith("Neighbor interface name:"):
-                    self.neighbor_intf = line.split(":", 1)[1].strip()
+                    self.failed_neighbor_intf = line.split(":", 1)[1].strip()
+
+                elif line.startswith("Experiment type:"):
+                    match = re.match(r"Experiment type: (.+?) link failure", line)
+                    if match:
+                         failureType = match.group(1)
+                         self.experiment_type = self.SOFT_LINK_FAILURE if failureType.strip() == "soft" else "hard"
+                    else:
+                        raise Exception("Unknown failure type.")
 
                 elif line.startswith("Experiment start time:"):
                     self.start_time = int(line.split(":", 1)[1].strip())
@@ -158,7 +177,59 @@ class ExperimentAnalysis(ABC):
         is the correct neighbor interface from the experiment
         '''
 
-        return interface == self.neighbor_intf
+        return interface == self.failed_neighbor_intf
+    
+
+    def parseIntfFailure(self, nodeName, recordTimestamp, intfName, convergenceTime, logType):
+        result = None
+
+        # If there is an interface failure that doesn't match how it was failed, the experiment was unsucessful.
+        if((self.experiment_type == self.SOFT_LINK_FAILURE and logType == self.FAILED_LOG) or
+           (self.experiment_type == self.HARD_LINK_FAILURE and logType == self.DISABLED_LOG)):
+            result = self.INVALID_INTERFACE_FAILURE
+
+        # If the interface failure log came from the the node that lost an interface.
+        elif(self.isFailedNode(nodeName) and 
+           self.isFailedInterface(intfName) and 
+           self.found_failed_intf is False):
+            
+            self.found_failed_intf = True
+            result = self.VALID_INTERFACE_FAILURE
+
+        # If the interface failure log came from the neighbor of the node that lost an interface.
+        elif(self.isFailedNeighbor(nodeName) and
+             self.isFailedNeighborInterface(intfName) and
+             self.found_failed_neighbor_intf is False):
+
+            self.found_failed_neighbor_intf = True
+            result = self.VALID_NEIGHBOR_FAILURE
+
+        else:
+            result = self.INVALID_INTERFACE_FAILURE
+
+        # As long as its a valid failure, update the convergence time
+        if(result != self.INVALID_INTERFACE_FAILURE):
+            self.updateIntfFailureTime(recordTimestamp)
+            convergenceTime = max(convergenceTime, recordTimestamp)
+
+        return result, convergenceTime
+    
+
+    def updateIntfFailureTime(self, candidateFailureTime):
+        '''
+        Given the two failure times on both sides of a link, the failure time
+        is the first recorded failure.
+        '''
+
+        # If no time has been recorded yet, it's the failure time.
+        if(not self.intf_failure_time):
+            self.intf_failure_time = candidateFailureTime
+        
+        # Otherwise, find the smaller of the two timestamps.
+        else:
+            self.intf_failure_time = min(self.intf_failure_time, candidateFailureTime)
+
+        return
 
 
     def isValidLogRecord(self, timestamp, useExperimentStartTime=False):
@@ -177,6 +248,9 @@ class ExperimentAnalysis(ABC):
     def getReconvergenceTime(self):
         if(not self.intf_failure_time):
             raise Exception("No interface failure recorded. Please check logs.")
+
+        if(not self.found_failed_intf and not self.found_failed_neighbor_intf):
+            raise Exception("The interface failure on both ends of the link was not found. Please check logs.")
 
         if(not self.convergence_times):
             raise Exception("No convergence logs found. Please check logs.")

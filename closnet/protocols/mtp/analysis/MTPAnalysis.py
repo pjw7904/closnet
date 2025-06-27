@@ -57,19 +57,37 @@ class MTPAnalysis(ExperimentAnalysis):
                     intfName = interfaceFailure.group(1)
                     recordTimestamp = int(interfaceFailure.group(2))
 
-                    # If the failure occurred prior to the start of the experiment, it was a failed experiment
-                    if recordTimestamp < self.start_time:
-                        raise Exception(f"[{nodeName}] Interface failure at {recordTimestamp} is earlier than experiment start at {self.start_time}!")
-
                     # If the failure occurred after the end of the experiment, it doesn't matter (and is common when tearing down the topology)
                     if recordTimestamp > self.stop_time:
+                        lastUpdateValid = False
                         continue
 
-                    # Analyze the failure
-                    convergenceTime = self.parseIntfFailure(nodeName, line, recordTimestamp, intfName, convergenceTime)
-                    updated = True
+                    logging.debug(f"[{nodeName}] Failed interface detected: {line}")
+                    logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
+                    logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
 
-                    # move onto the next record
+                    # If the failure occurred prior to the start of the experiment, it was a failed experiment
+                    if recordTimestamp < self.start_time:
+                        earlyFailureMessage = f"[{nodeName}] Interface failure at {recordTimestamp} is earlier than experiment start at {self.start_time}!"
+                        logging.debug(earlyFailureMessage)
+                        raise Exception(earlyFailureMessage)
+
+                    # Analyze the failure
+                    result, convergenceTime = self.parseIntfFailure(nodeName, recordTimestamp, intfName, convergenceTime, self.FAILED_LOG)
+                    updated = True # The node's state has been updated as a result of a failure.
+
+                    if(result == self.VALID_INTERFACE_FAILURE):
+                        logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
+
+                    elif(result == self.VALID_NEIGHBOR_FAILURE):
+                        logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
+
+                    elif(result == self.INVALID_INTERFACE_FAILURE):
+                        invalidFailureMessage = f"[{nodeName}] Interface failure at {recordTimestamp} is invalid!"
+                        logging.debug(invalidFailureMessage)
+                        raise Exception(invalidFailureMessage)                        
+
+                    # Move onto the next record
                     lastUpdateValid = False
                     continue
 
@@ -97,23 +115,42 @@ class MTPAnalysis(ExperimentAnalysis):
                 # Check to see if the log record describes an interface that was disabled due to missing keep-alive messages
                 interfaceDisabled = self.INTF_DISABLE_KEEPALIVE_PATTERN.search(line)
                 if interfaceDisabled:
+                    # Grab failed interface's name and the timestamp of the log record.
                     intfName  = interfaceDisabled.group(1)
                     recordTimestamp  = int(interfaceDisabled.group(2))
-
-                    # If the failure occurred prior to the start of the test, it was a failed test
-                    if recordTimestamp < self.start_time:
-                        raise Exception(f"[{nodeName}] Interface disabled at {recordTimestamp} is earlier than experiment start at {self.start_time}!")
 
                     # If the failure occurred after the end of the test, it doesn't matter (and is common when tearing down the topology)
                     if recordTimestamp > self.stop_time:
                         lastUpdateValid = False
                         continue
 
-                    # Analyze the interface timeout
-                    convergenceTime = self.parseIntfTimeout(nodeName, line, recordTimestamp, intfName, convergenceTime)
-                    updated = True
+                    logging.debug(f"[{nodeName}] Disabled interface detected: {line}")
+                    logging.debug(f"[{nodeName}] Disabled interface timestamp: {recordTimestamp}")
+                    logging.debug(f"[{nodeName}] Disabled interface name: {intfName}")
 
-                    # move onto the next record
+                    # If the failure occurred prior to the start of the experiment, it was a failed experiment
+                    if recordTimestamp < self.start_time:
+                        earlyFailureMessage = f"[{nodeName}] Interface disabled at {recordTimestamp} is earlier than experiment start at {self.start_time}!"
+                        logging.debug(earlyFailureMessage)
+                        raise Exception(earlyFailureMessage)
+
+                    # Analyze the failure
+                    result, convergenceTime = self.parseIntfFailure(nodeName, recordTimestamp, intfName, convergenceTime, self.DISABLED_LOG)
+                    updated = True # The node's state has been updated as a result of a failure.
+
+
+                    if(result == self.VALID_INTERFACE_FAILURE):
+                        logging.debug(f"[{nodeName}] Successfully determined to be disabled node.")
+
+                    elif(result == self.VALID_NEIGHBOR_FAILURE):
+                        logging.debug(f"[{nodeName}] Successfully determined to be disabled neighbor node.")
+
+                    elif(result == self.INVALID_INTERFACE_FAILURE):
+                        invalidFailureMessage = f"[{nodeName}] Interface disabled at {recordTimestamp} is invalid!"
+                        logging.debug(invalidFailureMessage)
+                        raise Exception(invalidFailureMessage)  
+
+                    # Move onto the next record
                     lastUpdateValid = False
                     continue
 
@@ -132,69 +169,4 @@ class MTPAnalysis(ExperimentAnalysis):
         logging.debug(f"[{nodeName}] Final values: Convergence Time = {convergenceTime} | Updated = {updated} | Overhead = {overhead}")
 
         return convergenceTime, updated, overhead
-
-
-    def parseIntfFailure(self, nodeName, line, recordTimestamp, intfName, convergenceTime):
-        logging.debug(f"[{nodeName}] Failed interface detected: {line}")
-        logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
-        logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
-
-        # If the interface failure log came from the the node that lost an interface.
-        if(self.isFailedNode(nodeName) and self.isFailedInterface(intfName)):
-            # Record the time the interface actually failed
-            self.updateIntfFailureTime(recordTimestamp)
-            convergenceTime = max(convergenceTime, recordTimestamp)
-
-            logging.debug(f"[{nodeName}] Successfully determined to be failed node.")
-
-        # If the interface failure log came from the neighbor of the node that lost an interface.
-        elif(self.isFailedNeighbor(nodeName) and self.isFailedNeighborInterface(intfName) and self.neighbor_intf_disabled is False):
-            self.neighbor_intf_failed = True
-            self.updateIntfFailureTime(recordTimestamp)
-            convergenceTime = max(convergenceTime, recordTimestamp)
-
-            logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
-
-        # If any other failure is detected, the test was a failure.
-        else:
-            logging.debug(f"[{nodeName}] Saw unexpected interface failure: {line}")
-            raise Exception(f"Log error: Interface failure on node {nodeName}, Please check logs.")
-        
-        return convergenceTime
     
-    
-    def parseIntfTimeout(self, nodeName, line, recordTimestamp, intfName, convergenceTime):
-        logging.debug(f"[{nodeName}] Disabled interface detected: {line}")
-        logging.debug(f"[{nodeName}] Disabled interface timestamp: {recordTimestamp}")
-        logging.debug(f"[{nodeName}] Disabled interface name: {intfName}")
-
-        # If the interface disabled log came from the neighbor of the node that lost an interface.
-        if(self.isFailedNeighbor(nodeName) and self.isFailedNeighborInterface(intfName) and self.neighbor_intf_failed is False):
-            self.neighbor_intf_disabled = True
-            convergenceTime = max(convergenceTime, recordTimestamp)
-
-            logging.debug(f"[{nodeName}] Successfully determined to be failed neighbor node.")
-
-        # If any other disabled interface is detected, the test was a failure.
-        else:
-            logging.debug(f"[{nodeName}] Saw unexpected interface disabled: {line}")
-            raise Exception(f"Log error: Interface disabled on node {nodeName}, Please check logs.")
-
-        return
-    
-    def updateIntfFailureTime(self, candidateFailureTime):
-        '''
-        Given the two failure times on both sides of a link, the failure time
-        is the first recorded failure.
-        '''
-
-        # If not time has been recorded yet, it's the failure time.
-        if(not self.intf_failure_time):
-            self.intf_failure_time = candidateFailureTime
-        
-        # Otherwise, find the smaller of the two timestamps.
-        else:
-            self.intf_failure_time = min(self.intf_failure_time, candidateFailureTime)
-
-
-        return

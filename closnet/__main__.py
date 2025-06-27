@@ -17,6 +17,7 @@ from mininet.clean import cleanup
 from closnet.ClosGenerator import ClosGenerator
 from closnet.topo_definitions.ClosConfigTopo import ClosConfigTopo
 from closnet.experiment.Experiment import *
+from closnet.experiment.ExperimentAnalysis import ExperimentAnalysis
 from closnet.ConfigParser import *
 from closnet.NodeConfigGenerator import *
 from closnet.utils.DrawClos import drawFoldedClos
@@ -55,6 +56,9 @@ def startInteractiveMode(net) -> None:
 
 def startExperimentMode(net, config, topologyName) -> None:
     info(f"\n*** Starting experiment mode:\n")
+
+    # Determine the type of failure (hard or soft link failure) this experiment requires
+    failureType = ExperimentAnalysis.SOFT_LINK_FAILURE if config.soft_failure else ExperimentAnalysis.HARD_LINK_FAILURE
 
     # Give the topology time for initial convergence
     timeToSleep = config.tiers * 4
@@ -107,7 +111,7 @@ def startExperimentMode(net, config, topologyName) -> None:
 
     experimentInfo = (config.node_to_fail, config.neighbor_of_failing_node, 
                         intfName, neighborIntfName, 
-                        experimentStartTime, experimentStopTime, trafficInExperiment)
+                        experimentStartTime, experimentStopTime, trafficInExperiment, failureType)
     experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, experimentInfo)
     
     info(f"\tExperiment directory: {experimentDirPath}\n")

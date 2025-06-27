@@ -169,9 +169,11 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
     experimentStartTime = experimentInfo[4]
     experimentStopTime = experimentInfo[5]
     trafficInExperiment = experimentInfo[6]
+    failureType = experimentInfo[7]
 
     # Generate a name for the experiment instance that was run
-    experiment_name = f"{topologyName}_{experimentStartTime}"
+    failureTypeAbv = "soft" if failureType == ExperimentAnalysis.SOFT_LINK_FAILURE else "hard"
+    experiment_name = f"{topologyName}_{failureTypeAbv}_{experimentStartTime}"
 
     # Create the experiment directory.
     base_dir = Path(logDirPath).resolve() # ~/closnet/logs
@@ -200,6 +202,7 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
         f"Interface name: {intfName}\n"
         f"Failed neighbor: {neighborFailed}\n"
         f"Neighbor interface name: {neighborIntfName}\n"
+        f"Experiment type: {failureTypeAbv} link failure\n"
         f"Experiment start time: {experimentStartTime}\n"
         f"Experiment stop time: {experimentStopTime}\n"
         f"Traffic included: {trafficInExperiment}"
