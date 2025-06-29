@@ -31,8 +31,8 @@ class MTPAnalysis(ExperimentAnalysis):
     RECV_UPDATE_SIZE_PATTERN = re.compile(r'Message size\s*=\s*(\d+)')
 
 
-    def __init__(self, experimentDirPath):
-        super().__init__(experimentDirPath)
+    def __init__(self, experimentDirPath, **kwargs):
+        super().__init__(experimentDirPath, **kwargs)
         # MTP lines show the timestamp in the text itself, e.g., "... at time 1742490729154" so no self.timestamp_format needed.
 
 

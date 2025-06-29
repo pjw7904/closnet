@@ -31,8 +31,8 @@ class BGPAnalysis(ExperimentAnalysis):
     BGP_HEADER_LEN = 23 
 
 
-    def __init__(self, experimentDirPath):
-        super().__init__(experimentDirPath)
+    def __init__(self, experimentDirPath, **kwargs):
+        super().__init__(experimentDirPath, **kwargs)
 
         # Update the timestamp to the FRR logging format     
         self.timestamp_format = self.TIMESTAMP_FORMAT
@@ -123,6 +123,10 @@ class BGPAnalysis(ExperimentAnalysis):
                 # If the node received updated prefix information via a BGP UPDATE message, parse the message
                 receivedBGPUpdate = self.RECV_UPDATE_PATTERN.search(line)
                 if receivedBGPUpdate:
+                    #  Ignore the record if its not within the experiment time frame post-failure.
+                    if not self.isValidLogRecord(recordTimestamp):
+                        continue
+
                     wlen, attrlen, alen = map(int, receivedBGPUpdate.groups())
 
                     if(any(val > 0 for val in (wlen, attrlen, alen))):

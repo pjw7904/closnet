@@ -122,6 +122,7 @@ def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, isSoftLi
     if(isSoftLinkFailure):
         interfaceFailureConfirmation = recordSystemTime()
         targetNode.cmd(f"tc qdisc add dev {intf_to_disable.name} root netem loss 100%")
+    
     # Hard link failure (interface and thus link failure)
     else:
         intf_to_disable.ifconfig('down')

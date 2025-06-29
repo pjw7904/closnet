@@ -16,7 +16,7 @@ class ExperimentAnalysis(ABC):
     FAILED_LOG = 1
     DISABLED_LOG = 2
 
-    def __init__(self, experimentDirPath):
+    def __init__(self, experimentDirPath, intfFailureTime=None):
         if not os.path.exists(experimentDirPath):
             raise FileNotFoundError("Experiment directory does not exist.")
 
@@ -28,7 +28,8 @@ class ExperimentAnalysis(ABC):
         self.experiment_type = None
         self.start_time = 0
         self.stop_time = 0
-        self.intf_failure_time = 0
+        self.intf_failure_time = intfFailureTime # The time an action was taken on an interface to fail/disable it.
+        self.intf_failure_detection_time = None # The time the first node on the link noticed the failure via the chosen protocol. 
 
         self.failed_node = None
         self.failed_intf = None
@@ -222,15 +223,19 @@ class ExperimentAnalysis(ABC):
         '''
 
         # If no time has been recorded yet, it's the failure time.
-        if(not self.intf_failure_time):
-            self.intf_failure_time = candidateFailureTime
+        if(self.intf_failure_detection_time is None):
+            self.intf_failure_detection_time = candidateFailureTime
         
         # Otherwise, find the smaller of the two timestamps.
         else:
-            self.intf_failure_time = min(self.intf_failure_time, candidateFailureTime)
+            self.intf_failure_detection_time = min(self.intf_failure_detection_time, candidateFailureTime)
+
+        # For hard link failures, the detection of the failure and the time it went down is the same.
+        if(self.experiment_type == self.HARD_LINK_FAILURE):
+            self.intf_failure_time = self.intf_failure_detection_time
 
         return
-
+        
 
     def isValidLogRecord(self, timestamp, useExperimentStartTime=False):
         '''
@@ -239,15 +244,17 @@ class ExperimentAnalysis(ABC):
         be in epoch formatting.
         '''
 
-        if(useExperimentStartTime):
-            return timestamp >= self.start_time and timestamp <= self.stop_time
-        else:
-            return timestamp >= self.intf_failure_time and timestamp <= self.stop_time
+        definedStartingTime = self.start_time if useExperimentStartTime else self.intf_failure_detection_time
+
+        return definedStartingTime <= timestamp <= self.stop_time
 
 
     def getReconvergenceTime(self):
-        if(not self.intf_failure_time):
+        if(self.intf_failure_time is None):
             raise Exception("No interface failure recorded. Please check logs.")
+        
+        if(self.intf_failure_detection_time is None):
+            raise Exception("No interface failure detected. Please check logs.")
 
         if(not self.found_failed_intf and not self.found_failed_neighbor_intf):
             raise Exception("The interface failure on both ends of the link was not found. Please check logs.")
@@ -257,6 +264,7 @@ class ExperimentAnalysis(ABC):
     
         lastChangeTimestamp = max(self.convergence_times)
         
+        # The calculation looks at the actual time of failure, thus it includes failure time ---> then time of detection --> then time to reconverge all other nodes
         return lastChangeTimestamp - self.intf_failure_time
     
 

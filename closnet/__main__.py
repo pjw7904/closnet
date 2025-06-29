@@ -86,6 +86,9 @@ def startExperimentMode(net, config, topologyName) -> None:
     else:
         info(f"EXPERIMENT STEP 2: The interface on {config.node_to_fail} was failed connected to {config.neighbor_of_failing_node}.\n")
 
+        # For a soft link failure, the interface starvation (failure) time needs to be pre-added to the analysis class, as there isn't a log generated for it, only the failure detection.
+        timeOfFailure = interfaceFailureConfirmation if config.soft_failure else None
+
     # Give the topology time for reconvergence after the the interface failure
     info(f"EXPERIMENT STEP 3: Giving the nodes {timeToSleep} seconds to get reconverged...\n")
 
@@ -119,9 +122,9 @@ def startExperimentMode(net, config, topologyName) -> None:
     info("EXPERIMENT STEP 6: Run experiment analysis and record results.\n")
 
     if(config.protocol == MTP):
-        experiment = MTPAnalysis(experimentDirPath)
+        experiment = MTPAnalysis(experimentDirPath, intfFailureTime=timeOfFailure)
     elif(config.protocol == BGP):
-        experiment = BGPAnalysis(experimentDirPath)
+        experiment = BGPAnalysis(experimentDirPath, intfFailureTime=timeOfFailure)
     else:
         raise Exception("Unknown/no protocol chosen, experiment cannot be analyzed")
     
