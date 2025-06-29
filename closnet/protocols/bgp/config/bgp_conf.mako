@@ -26,6 +26,7 @@ exit
 !
 router bgp ${bgp_asn}
  timers bgp 1 3
+ bgp log-neighbor-changes
 % for neighbor in neighbors:
  neighbor ${neighbor["ip"]} remote-as ${neighbor["asn"]}
  % if bfd:
