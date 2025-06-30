@@ -128,7 +128,7 @@ class ExperimentAnalysis(ABC):
                     match = re.match(r"Experiment type: (.+?) link failure", line)
                     if match:
                          failureType = match.group(1)
-                         self.experiment_type = self.SOFT_LINK_FAILURE if failureType.strip() == "soft" else "hard"
+                         self.experiment_type = self.SOFT_LINK_FAILURE if failureType.strip() == "soft" else self.HARD_LINK_FAILURE
                     else:
                         raise Exception("Unknown failure type.")
 
