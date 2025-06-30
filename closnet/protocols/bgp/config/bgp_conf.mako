@@ -12,6 +12,7 @@ debug zebra events
 % if bfd:
 !
 bfd
+ log-session-changes 
  profile lowerIntervals
   transmit-interval 100
  !
