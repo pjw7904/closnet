@@ -4,6 +4,8 @@ import shutil
 import logging
 import os
 import signal
+import json
+import re
 from pathlib import Path
 from time import sleep, time_ns
 
@@ -86,6 +88,47 @@ def stopTraffic(senderProcess, receiverProcess):
             receiverProcess.wait()
 
 
+def collectLinkAddressing(net, node_a, node_b):
+    """
+    Given a link, map IP addressing (could be expanded to other types) to nodes and their respective interface
+
+    Result is a flat dict:
+        { "10.0.0.1": {"node": "T3_1", "intf": "T3_1-eth1",
+                       "peer_ip": "10.0.0.2", "peer_node": "S2_11"},
+          "10.0.0.2": {"node": "S2_11", "intf": "S2_11-eth0",
+                       "peer_ip": "10.0.0.1", "peer_node": "T3_1"},
+          ...
+        }
+    """
+
+    nodes = {node_a, node_b}
+    ipmap = {}
+
+    # Resolve names --> Node objects once
+    nodes = {net.get(n) if isinstance(n, str) else n for n in nodes}
+
+    for node in nodes:
+        pat = re.compile(rf'^{re.escape(node.name)}-eth\d+$')
+
+        for intf in node.intfList():
+            if intf.link is None or not pat.match(intf.name):
+                continue  # skip lo and non-eth ports
+
+            ip = intf.IP()
+            if ip == "0.0.0.0":
+                continue  # skip un-numbered ports
+
+            peer_intf = intf.link.intf1 if intf is intf.link.intf2 else intf.link.intf2
+            ipmap[ip] = {
+                "node":      node.name,
+                "intf":      intf.name,
+                "peer_ip":   peer_intf.IP(),
+                "peer_node": peer_intf.node.name,
+            }
+
+    return ipmap
+
+
 def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, isSoftLinkFailure, trafficNodes):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor
@@ -157,7 +200,7 @@ def copyLogs(logPattern, dirPath):
     return
 
 
-def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
+def collectLogs(protocol, topologyName, logDirPath, addressingDict, experimentInfo):
     '''
     Copy protocol log files from a test into a directory to be analyzed.
     '''
@@ -194,6 +237,12 @@ def collectLogs(protocol, topologyName, logDirPath, experimentInfo):
         trafficDir = log_dir_path / "traffic"
         _mkdirWithPermissions(trafficDir)
         copyLogs(TRAFFIC_LOG_FILE_PATTERN, trafficDir.as_posix())
+
+    # Create a log file to record IP adddress --> node and interface mapping, if applicable.
+    if(addressingDict):
+        addressing_log_file = log_dir_path / "addressing.log"
+        addressing_log_file.write_text(json.dumps(addressingDict, indent=2))
+        addressing_log_file.chmod(0o777) 
 
     # Create a log file to record information associated with the experiment run
     experiment_log_file = log_dir_path / "experiment.log"

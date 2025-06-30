@@ -57,8 +57,15 @@ def startInteractiveMode(net) -> None:
 def startExperimentMode(net, config, topologyName) -> None:
     info(f"\n*** Starting experiment mode:\n")
 
+    info(f"EXPERIMENT STEP 0: Collect experiment information.\n")
+
     # Determine the type of failure (hard or soft link failure) this experiment requires
     failureType = ExperimentAnalysis.SOFT_LINK_FAILURE if config.soft_failure else ExperimentAnalysis.HARD_LINK_FAILURE
+    info(f"\tFailure Type: {'Soft link failure' if config.soft_failure else 'Hard link failure'}\n")
+
+    # Collect IP addressing for nodes attached to the failed link for analysis later (if necessary)
+    addressingDict = collectLinkAddressing(net, config.node_to_fail, config.neighbor_of_failing_node)
+    info(f"\tAddressing map created with {len(addressingDict)} entries\n")
 
     # Give the topology time for initial convergence
     timeToSleep = config.tiers * 4
@@ -106,7 +113,7 @@ def startExperimentMode(net, config, topologyName) -> None:
         info(f"Stopping traffic stream {trafficStream}...")
         stopTraffic(senderProcess, receiverProcess)
         trafficInExperiment = True
-    
+
     net.stop()
 
     # Collect log files generated
@@ -115,7 +122,7 @@ def startExperimentMode(net, config, topologyName) -> None:
     experimentInfo = (config.node_to_fail, config.neighbor_of_failing_node, 
                         intfName, neighborIntfName, 
                         experimentStartTime, experimentStopTime, trafficInExperiment, failureType)
-    experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, experimentInfo)
+    experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, addressingDict, experimentInfo)
     
     info(f"\tExperiment directory: {experimentDirPath}\n")
 
