@@ -1,13 +1,18 @@
 {
     "protocol": "bgp",
-    "bfd": true,
-    "tiers": 2,
+    "bfd": false,
+    "tiers": 3,
     "ports": 4,
     "southbound": [[1, 1]],
-    "node_to_fail": "L1",
-    "neighbor_of_failing_node": "T1",
-    "soft_failure": true,
-    "traffic": [["C11", "C41"]],
-    "log_dir_path": "/home/pjw7904/closnet/logs",
+    "node_to_fail": "L1_11",
+    "neighbor_of_failing_node": "S2_11",
+    "soft_failure": false,
+    "traffic": {
+        "enabled": true,
+        "senders":   ["C0_111"],
+        "receivers": ["C0_411"],
+        "use_ping": true
+    },
+    "log_dir_path": "/home/student/closnet/logs",
     "debugging": true
 }
