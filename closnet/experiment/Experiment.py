@@ -7,6 +7,7 @@ import signal
 import json
 import re
 from pathlib import Path
+from collections import deque
 from time import sleep, time_ns
 
 # Custom libraries
@@ -16,8 +17,10 @@ from closnet.TrafficGenerator import analyzeTraffic
 # Constants
 TRAFFIC_GEN = os.path.join(os.path.dirname(__file__), "..", "TrafficGenerator.py")
 NUM_TEST_PACKETS_TO_SEND = 1000
+NUM_PINGS_TO_SEND = 30
+PING_INTERVAL = 0.5
 PROTOCOL_LOG_FILE_PATTERN = "*.log"
-TRAFFIC_LOG_FILE_PATTERN = "*.pcapng"
+TRAFFIC_LOG_FILE_PATTERN = "traffic_*"
 
 def recordSystemTime():
     '''
@@ -27,7 +30,56 @@ def recordSystemTime():
     return time_ns() // 1000000
 
 
-def startTraffic(net, sender, receiver, packetCount, experimentStartTime):
+def collectTrafficRequests(trafficConfig):
+    """
+    Returns a list of (sender, receiver, use_ping) triples,
+    where use_ping is the same scalar for every pair.
+    """
+
+    if not trafficConfig or not trafficConfig.get("enabled", False):
+        return []
+
+    senders   = trafficConfig["senders"]
+    receivers = trafficConfig["receivers"]
+
+    # Promote any scalar to a list so len() works
+    if not isinstance(senders,   list): senders   = [senders]
+    if not isinstance(receivers, list): receivers = [receivers]
+
+    if len(senders) != len(receivers):
+        raise ValueError("'sender' and 'receiver' must be the same length")
+
+    use_ping = bool(trafficConfig.get("use_ping", False))
+
+    # Build one tuple per traffic stream
+    return [(s, r, use_ping) for s, r in zip(senders, receivers)]
+
+
+def startPingTraffic(net, sender, receiver, packetCount, experimentStartTime):
+    """
+    Transmit test ICMP Echo packets via the ping utility from <sender>.
+    """
+
+    # Get the Mininet nodes representing the traffic source and destination
+    sender = net.get(sender)
+    receiver = net.get(receiver)
+
+    # File that will hold the ping output
+    logPath = Path("/tmp") / f"traffic_{sender}_{receiver}_{experimentStartTime}.ping"
+    logFile = logPath.open("w")
+
+    # Start the ping inside the sender’s namespace
+    senderProcess = sender.popen([
+        "ping",
+        "-i", str(PING_INTERVAL),
+        "-c", str(NUM_PINGS_TO_SEND),
+        receiver.IP()
+    ], stdout=logFile, stderr=subprocess.STDOUT)
+
+    # Return a tuple always containing None to match the (sender, receiver) traffic tuple format 
+    return senderProcess, None
+
+def startCustomTraffic(net, sender, receiver, packetCount, experimentStartTime):
     """
     Start a capture in <receiver>, then transmit test packets from <sender>.
     """
@@ -64,28 +116,29 @@ def startTraffic(net, sender, receiver, packetCount, experimentStartTime):
         "-e", senderIntfName
     ])
 
-    return senderProcess, receiverProcess, pcapFilePath
+    return senderProcess, receiverProcess
 
 
 def stopTraffic(senderProcess, receiverProcess):
     # Wait for the sender to finish naturally
     senderProcess.wait()
 
-    # Ask tshark to stop politely
-    receiverProcess.send_signal(signal.SIGINT) # SIGINT (forces it to flush the pcap)
-
-    try:
-        receiverProcess.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        # If it ignores SIGINT, escalate
-        receiverProcess.terminate() # SIGTERM
+    if receiverProcess is not None:
+        # Ask tshark to stop politely
+        receiverProcess.send_signal(signal.SIGINT) # SIGINT (forces it to flush the pcap)
 
         try:
-            receiverProcess.wait(timeout=2)
+            receiverProcess.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            # 
-            receiverProcess.kill() # SIGKILL
-            receiverProcess.wait()
+            # If it ignores SIGINT, escalate
+            receiverProcess.terminate() # SIGTERM
+
+            try:
+                receiverProcess.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                # 
+                receiverProcess.kill() # SIGKILL
+                receiverProcess.wait()
 
 
 def collectLinkAddressing(net, node_a, node_b):
@@ -129,6 +182,28 @@ def collectLinkAddressing(net, node_a, node_b):
     return ipmap
 
 
+def collectPingSummary(pingLogFilePath):
+    """
+    Return the final two non-blank lines from <pingLogFilePath> as
+    one formatted string.  If the file contains fewer than two
+    non-blank lines, return whatever is available; if it's empty,
+    return None.
+    """
+    summaryLines = deque(maxlen=3)
+
+    with pingLogFilePath.open("r", encoding="utf-8", errors="replace") as f:
+        for raw in f:
+            line = raw.rstrip("\n")
+            if line.strip(): # Ignore blank or whitespace-only lines
+                summaryLines.append(line)
+
+    # Return nothing if nothing was found in the file for whatever erason.
+    if not summaryLines:
+        return None
+
+    return "\n".join(summaryLines)
+
+
 def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, isSoftLinkFailure, trafficNodes):
     '''
     Fail an interface on a Mininet node connected to a specified neighbor
@@ -153,13 +228,22 @@ def startReconvergenceExperiment(net, targetNodeName, neighborNodeName, isSoftLi
 
     # Start the traffic generation, if specified
     trafficStreams = []
-    if(trafficNodes):
-        for trafficPair in trafficNodes:
-            # Tuple containing (senderProcess, receiverProcess, pcapFilePath)
-            trafficStreams.append(startTraffic(net, 
-                                                trafficPair[0], trafficPair[1], 
-                                                NUM_TEST_PACKETS_TO_SEND, 
-                                                experimentStartTime))
+    for senderProcess, receiverProcess, use_ping in trafficNodes:
+        if(use_ping):
+            trafficInfo = startPingTraffic(net,
+                                           senderProcess, receiverProcess,
+                                           NUM_PINGS_TO_SEND,
+                                           experimentStartTime)
+        else:
+            trafficInfo = startCustomTraffic(net,
+                                             senderProcess, receiverProcess,
+                                             NUM_TEST_PACKETS_TO_SEND,
+                                             experimentStartTime)
+
+        trafficStreams.append(trafficInfo)
+
+    # Give the traffic a moment before starting up
+    sleep(1)
 
     # Soft link failure (interface egress traffic starvation)
     if(isSoftLinkFailure):
@@ -284,7 +368,8 @@ def writeResults(experiment: ExperimentAnalysis) -> None:
 
     if(experiment.traffic_included):
         logging.info("=== TRAFFIC ===")
-        logging.info(experiment.traffic)
+        for trafficResult in experiment.traffic:
+            logging.info(trafficResult)
 
     return
 
@@ -330,7 +415,12 @@ def runExperimentAnalysis(logDirPath, experiment: ExperimentAnalysis, debugging=
     if(experiment.traffic_included):
         for logFile, nodes in experiment.iterLogFiles(TRAFFIC_LOGS_DIR, ".pcapng"):
             logging.debug(f"\n*** Analyzing {nodes} traffic log file ({logFile}) ***")
-            experiment.traffic = analyzeTraffic(logFile, writeToFile=False)
+            experiment.traffic.append(analyzeTraffic(logFile, writeToFile=False))
+
+        for logFile, nodes in experiment.iterLogFiles(TRAFFIC_LOGS_DIR, ".ping"):
+            logging.debug(f"\n*** Analyzing {nodes} ping log file ({logFile}) ***")
+            experiment.traffic.append(collectPingSummary(Path(logFile)))
+    
 
     # Write the analysis results to the results log file
     writeResults(experiment)

@@ -51,7 +51,7 @@ class ExperimentAnalysis(ABC):
         self.overhead = 0
         self.blast_radius = 0.0
         self.reconvergence_time = 0
-        self.traffic = None
+        self.traffic = []
 
 
     @abstractmethod

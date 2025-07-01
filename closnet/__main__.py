@@ -67,6 +67,11 @@ def startExperimentMode(net, config, topologyName) -> None:
     addressingDict = collectLinkAddressing(net, config.node_to_fail, config.neighbor_of_failing_node)
     info(f"\tAddressing map created with {len(addressingDict)} entries\n")
 
+    # Collect any client nodes are sending traffic during the experiment
+    trafficRequests = collectTrafficRequests(config.traffic)
+    trafficType = "ping" if bool(config.traffic["use_ping"]) is True else "custom traffic generator"
+    info(f"\t{len(trafficRequests)} pairs of clients sending traffic using {trafficType}\n")
+
     # Give the topology time for initial convergence
     timeToSleep = config.tiers * 4
     info(f"EXPERIMENT STEP 1: Giving the nodes {timeToSleep} seconds to get converged...\n")
@@ -83,7 +88,7 @@ def startExperimentMode(net, config, topologyName) -> None:
     ) = startReconvergenceExperiment(
         net,
         config.node_to_fail, config.neighbor_of_failing_node, config.soft_failure,
-        config.traffic,
+        trafficRequests,
     )
 
     if(not interfaceFailureConfirmation):
@@ -106,13 +111,16 @@ def startExperimentMode(net, config, topologyName) -> None:
 
     experimentStopTime = recordSystemTime()
 
+    info(f"\tStopping traffic streams...")
+
     trafficInExperiment = False
     for trafficStream in trafficStreams:
         senderProcess = trafficStream[0]
         receiverProcess = trafficStream[1]
-        info(f"Stopping traffic stream {trafficStream}...")
         stopTraffic(senderProcess, receiverProcess)
         trafficInExperiment = True
+
+    info(f"\tStopping switches and clients...")
 
     net.stop()
 
