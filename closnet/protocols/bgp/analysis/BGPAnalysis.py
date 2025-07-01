@@ -115,7 +115,7 @@ class BGPAnalysis(ExperimentAnalysis):
                     if recordTimestamp > self.stop_time:
                         continue
 
-                    logging.debug(f"[{nodeName}] Failed interface detected: {line}")
+                    logging.debug(f"[{nodeName}] Failed interface detected: {line.strip()}")
                     logging.debug(f"[{nodeName}] Failed interface timestamp: {recordTimestamp}")
                     logging.debug(f"[{nodeName}] Failed interface name: {intfName}")
 
