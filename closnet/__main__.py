@@ -129,7 +129,10 @@ def startExperimentMode(net, config, topologyName) -> None:
 
     experimentInfo = (config.node_to_fail, config.neighbor_of_failing_node, 
                         intfName, neighborIntfName, 
-                        experimentStartTime, experimentStopTime, trafficInExperiment, failureType)
+                        experimentStartTime, experimentStopTime, 
+                        trafficInExperiment, 
+                        failureType, timeOfFailure
+                    )
     experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, addressingDict, experimentInfo)
     
     info(f"\tExperiment directory: {experimentDirPath}\n")
@@ -137,15 +140,11 @@ def startExperimentMode(net, config, topologyName) -> None:
     info("EXPERIMENT STEP 6: Run experiment analysis and record results.\n")
 
     if(config.protocol == MTP):
-        experiment = MTPAnalysis(experimentDirPath, intfFailureTime=timeOfFailure)
+        experiment = MTPAnalysis(experimentDirPath)
     elif(config.protocol == BGP):
-        experiment = BGPAnalysis(experimentDirPath, intfFailureTime=timeOfFailure)
+        experiment = BGPAnalysis(experimentDirPath)
     else:
         raise Exception("Unknown/no protocol chosen, experiment cannot be analyzed")
-    
-    # Soft interface failures will not have a log for when the link was disabled, one is defined
-    if(config.soft_failure):
-        experiment.intf_failure_time = interfaceFailureConfirmation
 
     runExperimentAnalysis(experimentDirPath, experiment, config.debugging)
 

@@ -298,6 +298,7 @@ def collectLogs(protocol, topologyName, logDirPath, addressingDict, experimentIn
     experimentStopTime = experimentInfo[5]
     trafficInExperiment = experimentInfo[6]
     failureType = experimentInfo[7]
+    failureTime = experimentInfo[8]
 
     # Generate a name for the experiment instance that was run
     failureTypeAbv = "soft" if failureType == ExperimentAnalysis.SOFT_LINK_FAILURE else "hard"
@@ -331,17 +332,21 @@ def collectLogs(protocol, topologyName, logDirPath, addressingDict, experimentIn
     # Create a log file to record information associated with the experiment run
     experiment_log_file = log_dir_path / "experiment.log"
 
-    failureText = (
-        f"Failed node: {nodeFailed}\n"
-        f"Interface name: {intfName}\n"
-        f"Failed neighbor: {neighborFailed}\n"
-        f"Neighbor interface name: {neighborIntfName}\n"
-        f"Experiment type: {failureTypeAbv} link failure\n"
-        f"Experiment start time: {experimentStartTime}\n"
-        f"Experiment stop time: {experimentStopTime}\n"
+    failureText = [
+        f"Failed node: {nodeFailed}",
+        f"Interface name: {intfName}",
+        f"Failed neighbor: {neighborFailed}",
+        f"Neighbor interface name: {neighborIntfName}",
+        f"Experiment type: {failureTypeAbv} link failure",
+        f"Experiment start time: {experimentStartTime}",
+        f"Experiment stop time: {experimentStopTime}",
         f"Traffic included: {trafficInExperiment}"
-    )
-    experiment_log_file.write_text(failureText)
+    ]
+
+    if(failureType == ExperimentAnalysis.SOFT_LINK_FAILURE):
+        failureText.append(f"Interface failure time: {failureTime}")
+
+    experiment_log_file.write_text("\n".join(failureText))
     experiment_log_file.chmod(0o777) 
 
     return str(log_dir_path)

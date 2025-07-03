@@ -16,7 +16,7 @@ class ExperimentAnalysis(ABC):
     FAILED_LOG = 1
     DISABLED_LOG = 2
 
-    def __init__(self, experimentDirPath, intfFailureTime=None):
+    def __init__(self, experimentDirPath):
         if not os.path.exists(experimentDirPath):
             raise FileNotFoundError("Experiment directory does not exist.")
 
@@ -28,7 +28,7 @@ class ExperimentAnalysis(ABC):
         self.experiment_type = None
         self.start_time = 0
         self.stop_time = 0
-        self.intf_failure_time = intfFailureTime # The time an action was taken on an interface to fail/disable it.
+        self.intf_failure_time = None # The time an action was taken on an interface to fail/disable it.
         self.intf_failure_detection_time = None # The time the first node on the link noticed the failure via the chosen protocol. 
 
         self.failed_node = None
@@ -142,6 +142,9 @@ class ExperimentAnalysis(ABC):
                     value = line.split(":", 1)[1].strip()
                     self.traffic_included = value.lower() == "true"
 
+                elif line.startswith("Interface failure time:"):
+                    self.intf_failure_time = int(line.split(":", 1)[1].strip())
+
         return
 
 
@@ -180,6 +183,14 @@ class ExperimentAnalysis(ABC):
 
         return interface == self.failed_neighbor_intf
     
+
+    def failureDetected(self):
+        '''
+        Has the failure already been detected yet?
+        '''
+
+        return self.intf_failure_detection_time is not None
+
 
     def parseIntfFailure(self, nodeName, recordTimestamp, intfName, convergenceTime, logType):
         result = None
