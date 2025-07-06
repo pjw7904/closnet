@@ -101,6 +101,15 @@ def startExperimentMode(net, config, topologyName) -> None:
         # For a soft link failure, the interface starvation (failure) time needs to be pre-added to the analysis class, as there isn't a log generated for it, only the failure detection.
         timeOfFailure = interfaceFailureConfirmation if config.soft_failure else None
 
+        # For a soft link failure, the interface starvation (failure) time needs to be pre-added to the analysis class, 
+        # as there isn't a log generated for it, only the failure detection.
+        if(config.soft_failure):
+            timeOfFailure = interfaceFailureConfirmation
+            failureUsesBFD = config.bfd if config.protocol == BGP else False # In the event MTP and bfd = True is accidently set
+        else:
+            timeOfFailure = None
+            failureUsesBFD = False
+
     # Give the topology time for reconvergence after the the interface failure
     info(f"EXPERIMENT STEP 3: Giving the nodes {timeToSleep} seconds to get reconverged...\n")
 
@@ -131,7 +140,7 @@ def startExperimentMode(net, config, topologyName) -> None:
                         intfName, neighborIntfName, 
                         experimentStartTime, experimentStopTime, 
                         trafficInExperiment, 
-                        failureType, timeOfFailure
+                        failureType, timeOfFailure, failureUsesBFD
                     )
     experimentDirPath = collectLogs(config.protocol, topologyName, config.log_dir_path, addressingDict, experimentInfo)
     

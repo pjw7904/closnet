@@ -299,6 +299,7 @@ def collectLogs(protocol, topologyName, logDirPath, addressingDict, experimentIn
     trafficInExperiment = experimentInfo[6]
     failureType = experimentInfo[7]
     failureTime = experimentInfo[8]
+    failureUsesBFD = experimentInfo[9]
 
     # Generate a name for the experiment instance that was run
     failureTypeAbv = "soft" if failureType == ExperimentAnalysis.SOFT_LINK_FAILURE else "hard"
@@ -337,7 +338,7 @@ def collectLogs(protocol, topologyName, logDirPath, addressingDict, experimentIn
         f"Interface name: {intfName}",
         f"Failed neighbor: {neighborFailed}",
         f"Neighbor interface name: {neighborIntfName}",
-        f"Experiment type: {failureTypeAbv} link failure",
+        f"Experiment type: {failureTypeAbv} link failure{' (BFD)' if failureUsesBFD else ''}",
         f"Experiment start time: {experimentStartTime}",
         f"Experiment stop time: {experimentStopTime}",
         f"Traffic included: {trafficInExperiment}"
